@@ -392,11 +392,14 @@ function resolveVote(room) {
   const g = room.game;
   const approve = Object.values(g.votes).filter(v => v).length;
   const passed = approve >= approvalsNeeded(g.size);
+  // Once everyone has voted the votes are public (standard Avalon), so record who voted what, in seat order.
   g.history[g.round].attempts.push({
     leader: leaderId(g),
     team: g.team.slice(),
     approve,
     reject: g.size - approve,
+    approvers: g.seats.filter(id => g.votes[id] === true),
+    rejecters: g.seats.filter(id => g.votes[id] === false),
     passed,
   });
   g.votes = {};

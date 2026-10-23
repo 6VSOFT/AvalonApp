@@ -470,3 +470,21 @@ test('new rooms default to the forced round after five rejections', () => {
   const { room: r5 } = G.createRoom('ABCDE', 'H', { size: 5 });
   assert.strictEqual(r5.config.rejectRule, 'forced', 'a config without a rule uses the default');
 });
+
+test('votes: who voted what is public only after everyone has voted, in seat order', () => {
+  const room = setup(6);
+  propose(room, room.game.seats.slice(0, 2));
+  const seats = room.game.seats;
+  const choice = id => [1, 3, 4].includes(seats.indexOf(id)); // seats 2, 4, 5 approve
+  // Vote in reverse seat order, checking that nobody can see choices before the last vote.
+  for (const id of seats.slice().reverse()) {
+    const before = JSON.stringify(G.viewFor(room, P(room, seats[0])));
+    assert.ok(!before.includes('approvers') && !before.includes('rejecters'), 'no vote breakdown before the reveal');
+    G.applyAction(room, P(room, id), { type: 'vote', approve: choice(id) });
+  }
+  const att = G.viewFor(room, P(room, seats[0])).history[0].attempts[0];
+  assert.deepStrictEqual(att.approvers, [seats[1], seats[3], seats[4]]);
+  assert.deepStrictEqual(att.rejecters, [seats[0], seats[2], seats[5]]);
+  assert.strictEqual(att.approve, 3);
+  assert.strictEqual(att.passed, false);
+});

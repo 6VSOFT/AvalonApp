@@ -300,6 +300,11 @@ function viewGame() {
 const nameOf = (st, id) => (st.players.find(p => p.id === id) || {}).name || '?';
 // Seat numbers are public (the lobby seating), so the client shows them next to names.
 const seatNo = (st, id) => st.players.findIndex(p => p.id === id) + 1;
+// "赞成 4【1号、2号、3号、4号】· 反对 1【5号】" (attempts saved before votes were recorded show counts only).
+function voteBreakdown(st, att) {
+  const seats = ids => (ids ? `【${ids.map(id => seatNo(st, id) + '号').join('、') || '无'}】` : '');
+  return `赞成 ${att.approve}${seats(att.approvers)} · 反对 ${att.reject}${seats(att.rejecters)}`;
+}
 
 function viewLobby(st) {
   const me = st.players.find(p => p.id === st.me.id);
@@ -444,10 +449,10 @@ function lastNotice(st) {
   const att = cur.attempts[cur.attempts.length - 1];
   if (st.phase === 'mission' && att) {
     return att.forced ? '<div class="notice">强制轮：跳过投票，队伍直接执行任务</div>'
-      : `<div class="notice ok">组队通过：赞成 ${att.approve} · 反对 ${att.reject}</div>`;
+      : `<div class="notice ok">组队通过：${voteBreakdown(st, att)}</div>`;
   }
   if (st.phase === 'team' && att && !att.passed) {
-    return `<div class="notice bad">上次组队被否决：赞成 ${att.approve} · 反对 ${att.reject}<br>队长移交给 <b>${esc(nameOf(st, st.leaderId))}</b>
+    return `<div class="notice bad">上次组队被否决：${voteBreakdown(st, att)}<br>队长移交给 <b>${esc(nameOf(st, st.leaderId))}</b>
       ${st.forced ? '<br><b>已连续 5 次否决，进入强制轮：本次组队不投票，直接执行任务。</b>' : ''}</div>`;
   }
   const prev = st.phase === 'assassin' ? cur : (st.round > 1 && cur.attempts.length === 0 ? st.history[st.round - 2] : null);
@@ -537,7 +542,8 @@ function viewPhase(st) {
 function historyRows(st) {
   return st.history.filter(h => h.attempts.length || h.result).map(h => {
     const atts = h.attempts.map((a, i) => `<div>#${i + 1} ${esc(nameOf(st, a.leader))}：${a.team.map(id => esc(nameOf(st, id))).join('、')}
-      <span class="badge ${a.passed ? 'ok' : 'bad'}">${a.forced ? '强制' : `${a.approve}:${a.reject}`}</span></div>`).join('');
+      <span class="badge ${a.passed ? 'ok' : 'bad'}">${a.forced ? '强制' : `${a.approve}:${a.reject}`}</span>
+      ${a.forced ? '' : `<div class="muted vote-seats">${voteBreakdown(st, a)}</div>`}</div>`).join('');
     const res = h.result ? `<span class="badge ${h.result.success ? 'ok' : 'bad'}">${h.result.success ? '成功' : '失败'} ${h.result.successCards}✓ ${h.result.failCards}✗</span>` : '<span class="badge">进行中</span>';
     return `<tr><td>第${h.round}轮<br><span class="muted">${h.size}人${h.failsNeeded > 1 ? ' · 2败' : ''}</span></td><td>${atts}</td><td>${res}</td></tr>`;
   }).join('');
