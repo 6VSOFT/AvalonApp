@@ -367,13 +367,17 @@ function roomExit(st) {
   </div>`;
 }
 
-// A confirmation dialog for destructive actions. Resolves true only on the red button.
-function confirmDanger(title, body, okLabel) {
+// In-app confirmation dialog. Native confirm() is blocked by some in-app browsers (and then
+// returns false), so the app never uses it. Resolves true only on the confirm button.
+// tone: 'danger' (red), 'ok' (green) or 'primary' (blue).
+function confirmDialog(title, body, okLabel, tone = 'danger') {
+  if (ui.confirmResolve) ui.confirmResolve(false); // a newer dialog replaces an unanswered one
   return new Promise(resolve => {
     ui.confirmResolve = resolve;
-    $modal.innerHTML = `<div class="card stack confirm-danger">
+    const btn = { danger: 'bad', ok: 'ok', primary: '' }[tone];
+    $modal.innerHTML = `<div class="card stack confirm-dialog ${tone === 'danger' ? 'confirm-danger' : ''}">
       <h3>${esc(title)}</h3><p>${esc(body)}</p>
-      <div class="grid2"><button class="ghost" data-a="confirm-no">取消</button><button class="bad" data-a="confirm-yes">${esc(okLabel)}</button></div>
+      <div class="grid2"><button class="ghost" data-a="confirm-no">取消</button><button class="${btn}" data-a="confirm-yes">${esc(okLabel)}</button></div>
     </div>`;
     $modal.classList.remove('hidden');
   });
@@ -685,7 +689,7 @@ document.addEventListener('click', async e => {
       break;
     case 'resume': enterGame(loadSession()); break;
     case 'forget':
-      if (confirm('放弃后将无法以该玩家身份回到房间。确定吗？')) { clearSession(); render(); }
+      if (await confirmDialog('放弃该会话？', '放弃后将无法以该玩家身份回到房间。', '放弃')) { clearSession(); render(); }
       break;
     case 'install':
       if (ui.installPrompt) { ui.installPrompt.prompt(); ui.installPrompt = null; render(); }
@@ -702,7 +706,7 @@ document.addEventListener('click', async e => {
     case 'seat': {
       const seat = Number(el.dataset.v);
       const other = st.players.find(p => p.seat === seat);
-      if (!other || confirm(`请求和 ${other.name} 互换座位？对方同意后生效。`)) act('seat', { seat });
+      if (!other || await confirmDialog('请求换座位？', `请求和 ${other.name} 互换座位，对方同意后生效。`, '发送请求', 'primary')) act('seat', { seat });
       break;
     }
     case 'swap-yes': act('swap_answer', { from: el.dataset.v, accept: true }); break;
@@ -711,14 +715,14 @@ document.addEventListener('click', async e => {
     case 'start': act('start'); break;
     case 'leave': {
       const inGame = st.status === 'playing';
-      const ok = await confirmDanger('离开房间？',
+      const ok = await confirmDialog('离开房间？',
         inGame ? '游戏正在进行，你离开后本局会立即结束，所有人回到大厅。' : '你将离开这个房间，座位会空出来。',
         inGame ? '离开并结束本局' : '离开房间');
       if (ok) act('leave');
       break;
     }
     case 'dissolve': {
-      const ok = await confirmDanger('解散房间？', '房间会立即关闭，所有玩家都会回到首页，进行中的游戏也会结束。此操作无法撤销。', '解散房间');
+      const ok = await confirmDialog('解散房间？', '房间会立即关闭，所有玩家都会回到首页，进行中的游戏也会结束。此操作无法撤销。', '解散房间');
       if (ok) act('dissolve');
       break;
     }
@@ -736,19 +740,19 @@ document.addEventListener('click', async e => {
     case 'propose': act('propose', { team: ui.selection }); break;
     case 'vote': {
       const approve = el.dataset.v === '1';
-      if (confirm(`确认投「${approve ? '赞成' : '反对'}」？提交后不可更改。`)) act('vote', { approve });
+      if (await confirmDialog(`确认投「${approve ? '赞成' : '反对'}」？`, '提交后不可更改。', approve ? '赞成' : '反对', approve ? 'ok' : 'danger')) act('vote', { approve });
       break;
     }
     case 'card': {
       const card = el.dataset.v;
-      if (confirm(`确认提交「${card === 'success' ? '成功' : '失败'}」牌？提交后不可更改。`)) act('mission', { card });
+      if (await confirmDialog(`确认提交「${card === 'success' ? '成功' : '失败'}」牌？`, '提交后不可更改。', card === 'success' ? '提交成功' : '提交失败', card === 'success' ? 'ok' : 'danger')) act('mission', { card });
       break;
     }
     case 'target': ui.target = el.dataset.id; render(); break;
     case 'assassinate':
-      if (ui.target && confirm(`确认刺杀 ${nameOf(st, ui.target)}？此操作不可撤销。`)) act('assassinate', { target: ui.target });
+      if (ui.target && await confirmDialog(`确认刺杀 ${nameOf(st, ui.target)}？`, '此操作不可撤销。猜中梅林则坏人获胜，否则好人获胜。', '刺杀')) act('assassinate', { target: ui.target });
       break;
-    case 'restart': if (confirm('重新开始将重新随机分配所有身份，确定吗？')) act('restart'); break;
+    case 'restart': if (await confirmDialog('重新开始？', '将回到大厅并重新随机分配所有身份。', '重新开始', 'primary')) act('restart'); break;
   }
 });
 
