@@ -5,8 +5,6 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
-  # src/api.js is CommonJS; ship qrcode alongside the bundle so its runtime require() resolves.
-  external_node_modules = ["qrcode"]
 
 # Join links (/r/CODE) are handled by the single-page app.
 [[redirects]]

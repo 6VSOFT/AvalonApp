@@ -2,6 +2,7 @@
 // Each room is one JSON blob; writes use onlyIfMatch (compare-and-set on the etag),
 // so concurrent votes or cards from different phones can never overwrite each other.
 import { getStore } from '@netlify/blobs';
+import qrcode from 'qrcode';
 import api from '../../src/api.js';
 
 const rooms = () => getStore({ name: 'rooms', consistency: 'strong' });
@@ -32,7 +33,7 @@ const blobStore = {
   },
 };
 
-const handle = api.createApi(blobStore);
+const handle = api.createApi(blobStore, qrcode);
 
 export default async (req, context) => handle(req, context.ip);
 

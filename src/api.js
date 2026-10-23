@@ -5,7 +5,6 @@
 // compare-and-set on the room's etag, so concurrent requests can never double
 // count a vote or card: the loser re-reads the room and re-validates its action.
 
-const QRCode = require('qrcode');
 const game = require('./game');
 
 const MAX_BODY = 4 * 1024;
@@ -69,8 +68,10 @@ function onlineSet(presence) {
 /**
  * @param store {get(code), create(code, room), put(code, room, etag), getPresence(code), touch(code, playerId)}
  *   get → {room, etag} | null; create/put → boolean (false when the key exists / the etag is stale).
+ * @param qrcode the `qrcode` module. The Netlify Function passes its own ES import, because the
+ *   bundler does not resolve a require() made from this CommonJS file.
  */
-function createApi(store) {
+function createApi(store, qrcode = require('qrcode')) {
   async function loadRoom(code) {
     if (!game.isValidCode(code)) fail('not_found', '房间代码无效');
     const r = await store.get(code);
@@ -160,7 +161,7 @@ function createApi(store) {
       await loadRoom(code);
       const origin = url.searchParams.get('origin');
       const base = origin && /^https?:\/\/[^\s/]+$/.test(origin) ? origin : url.origin;
-      const svg = await QRCode.toString(`${base}/r/${code}`, { type: 'svg', margin: 1, color: { dark: '#123367', light: '#ffffff' } });
+      const svg = await qrcode.toString(`${base}/r/${code}`, { type: 'svg', margin: 1, color: { dark: '#123367', light: '#ffffff' } });
       return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' } });
     }
     return json(404, { error: 'not_found' });
