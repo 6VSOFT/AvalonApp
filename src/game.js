@@ -1,24 +1,74 @@
 'use strict';
-// Avalon 6-player rules engine. All state mutation goes through applyAction(),
+// Avalon rules engine (5–10 players). All state mutation goes through applyAction(),
 // which validates every action against the current phase and the acting player.
 // Node runs this synchronously on a single thread, so each action is atomic.
 
 const crypto = require('crypto');
 
-const PLAYER_COUNT = 6;
-const MISSION_SIZES = [2, 3, 4, 3, 4];
-const APPROVALS_NEEDED = 4;
+const MIN_PLAYERS = 5;
+const MAX_PLAYERS = 10;
 const MAX_REJECTS = 5;
 const WINS_NEEDED = 3;
 const NAME_MAX = 12;
 
+// Official board per player count. Round 4 needs two fail cards with 7+ players.
+const BOARDS = {
+  5: { good: 3, evil: 2, missions: [2, 3, 2, 3, 3] },
+  6: { good: 4, evil: 2, missions: [2, 3, 4, 3, 4] },
+  7: { good: 4, evil: 3, missions: [2, 3, 3, 4, 4] },
+  8: { good: 5, evil: 3, missions: [3, 4, 4, 5, 5] },
+  9: { good: 6, evil: 3, missions: [3, 4, 4, 5, 5] },
+  10: { good: 6, evil: 4, missions: [3, 4, 4, 5, 5] },
+};
+const failsNeeded = (size, round) => (size >= 7 && round === 3 ? 2 : 1);
+
 const ROLES = {
-  merlin: { name: '梅林 Merlin', team: 'good', desc: '你知道谁是坏人，但不能暴露自己。好人三次任务成功后，刺客会尝试刺杀你。' },
+  merlin: { name: '梅林 Merlin', team: 'good', desc: '你知道坏人是谁（莫德雷德除外），但不能暴露自己。好人三次任务成功后，刺客会尝试刺杀你。' },
+  percival: { name: '派西维尔 Percival', team: 'good', desc: '你会看到梅林和莫甘娜，但无法分辨谁是真梅林。你的任务是保护梅林。' },
   servant: { name: '亚瑟的忠臣 Loyal Servant', team: 'good', desc: '你没有特殊能力。通过讨论与投票找出坏人，只能提交成功牌。' },
   assassin: { name: '刺客 Assassin', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌。若好人完成三次任务，由你刺杀梅林。' },
-  minion: { name: '莫德雷德爪牙 Minion of Mordred', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌，帮助任务失败。' },
+  morgana: { name: '莫甘娜 Morgana', team: 'evil', desc: '你在派西维尔眼中看起来像梅林。认识你的同伴，可以提交成功或失败牌。' },
+  mordred: { name: '莫德雷德 Mordred', team: 'evil', desc: '梅林看不到你。你认识你的同伴，可以提交成功或失败牌。' },
+  oberon: { name: '奥伯伦 Oberon', team: 'evil', desc: '你不认识其他坏人，他们也不认识你，但梅林能看到你。可以提交成功或失败牌。' },
+  minion: { name: '莫德雷德爪牙 Minion', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌，帮助任务失败。' },
 };
-const ROLE_DECK = ['merlin', 'servant', 'servant', 'servant', 'assassin', 'minion'];
+
+const rep = (role, n) => Array(n).fill(role);
+// Role presets per player count; the first one is the default.
+const PRESETS = {
+  5: [
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', 'servant', 'morgana', 'assassin'] },
+    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 2), 'assassin', 'minion'] },
+  ],
+  6: [
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 2), 'morgana', 'assassin'] },
+    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 3), 'assassin', 'minion'] },
+  ],
+  7: [
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 2), 'morgana', 'assassin', 'minion'] },
+    { id: 'oberon', name: '奥伯伦局', roles: ['merlin', 'percival', ...rep('servant', 2), 'morgana', 'assassin', 'oberon'] },
+    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 3), 'assassin', ...rep('minion', 2)] },
+  ],
+  8: [
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 3), 'morgana', 'assassin', 'minion'] },
+    { id: 'mordred', name: '莫德雷德局', roles: ['merlin', 'percival', ...rep('servant', 3), 'morgana', 'assassin', 'mordred'] },
+    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 4), 'assassin', ...rep('minion', 2)] },
+  ],
+  9: [
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'mordred'] },
+    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 5), 'assassin', ...rep('minion', 2)] },
+  ],
+  10: [
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'mordred', 'oberon'] },
+    { id: 'no_oberon', name: '无奥伯伦局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'mordred', 'minion'] },
+    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 5), 'assassin', ...rep('minion', 3)] },
+  ],
+};
+const REJECT_RULES = {
+  evil_wins: '坏人直接获胜',
+  forced: '进入强制轮',
+};
+const DEFAULT_CONFIG = { size: 6, preset: 'standard', rejectRule: 'evil_wins' };
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 class GameError extends Error {
@@ -59,7 +109,25 @@ function cleanName(name) {
   return n;
 }
 
-function createRoom(code, hostName) {
+function presetFor(config) {
+  return (PRESETS[config.size] || []).find(p => p.id === config.preset) || null;
+}
+// Validates a (possibly partial) config from a client, filling gaps from `base`.
+function cleanConfig(input, base = DEFAULT_CONFIG) {
+  const given = input && typeof input === 'object' ? input : {};
+  const c = { ...base, ...given };
+  const size = Number(c.size);
+  if (!Number.isInteger(size) || !BOARDS[size]) fail('bad_config', `人数必须在 ${MIN_PLAYERS}–${MAX_PLAYERS} 之间`);
+  let preset = c.preset;
+  if (!PRESETS[size].some(p => p.id === preset)) {
+    if (given.preset !== undefined) fail('bad_config', '无效的角色预设');
+    preset = PRESETS[size][0].id; // size changed and the old preset doesn't exist for it
+  }
+  if (!REJECT_RULES[c.rejectRule]) fail('bad_config', '无效的流局规则');
+  return { size, preset, rejectRule: c.rejectRule };
+}
+
+function createRoom(code, hostName, config) {
   const room = {
     code,
     createdAt: Date.now(),
@@ -68,6 +136,7 @@ function createRoom(code, hostName) {
     gameNo: 0,
     status: 'lobby', // lobby | playing | ended
     hostId: null,
+    config: cleanConfig(config),
     players: [],
     game: null,
   };
@@ -79,7 +148,7 @@ function createRoom(code, hostName) {
 function addPlayer(room, rawName) {
   const name = cleanName(rawName);
   if (room.status !== 'lobby') fail('started', '游戏已开始，无法加入');
-  if (room.players.length >= PLAYER_COUNT) fail('full', '房间已满（6/6）');
+  if (room.players.length >= room.config.size) fail('full', `房间已满（${room.config.size}/${room.config.size}）`);
   if (room.players.some(p => p.name.toLowerCase() === name.toLowerCase())) fail('name_taken', '昵称已被使用，请换一个');
   const player = { id: 'p' + newId(6), token: newId(24), name, ready: false };
   room.players.push(player);
@@ -95,24 +164,30 @@ function findByToken(room, token) {
 }
 
 function startGame(room) {
-  const roles = shuffle(ROLE_DECK);
+  const { size, rejectRule } = room.config;
+  const roles = shuffle(presetFor(room.config).roles);
   const order = shuffle(room.players.map(p => p.id)); // random seating for leader rotation
+  const missions = BOARDS[size].missions;
   room.gameNo++;
   room.status = 'playing';
   room.game = {
     phase: 'reveal', // reveal | team | vote | mission | assassin | ended
+    size,
+    rejectRule,
+    preset: room.config.preset,
     seats: order,
     roles: Object.fromEntries(order.map((id, i) => [id, roles[i]])),
     acks: [],
-    leaderIdx: randInt(PLAYER_COUNT),
+    leaderIdx: randInt(size),
     round: 0, // 0-based
     successes: 0,
     fails: 0,
     rejects: 0,
+    forced: false, // true when the next proposal skips the vote (5-rejection forced round)
     team: [],
     votes: {},
     cards: {},
-    history: MISSION_SIZES.map((size, i) => ({ round: i + 1, size, attempts: [], result: null })),
+    history: missions.map((sz, i) => ({ round: i + 1, size: sz, failsNeeded: failsNeeded(size, i), attempts: [], result: null })),
     assassination: null,
     winner: null,
     reason: null,
@@ -128,7 +203,9 @@ function endGame(room, winner, reason) {
 }
 
 function leaderId(g) { return g.seats[g.leaderIdx]; }
-function nextLeader(g) { g.leaderIdx = (g.leaderIdx + 1) % PLAYER_COUNT; }
+function nextLeader(g) { g.leaderIdx = (g.leaderIdx + 1) % g.size; }
+const approvalsNeeded = size => Math.floor(size / 2) + 1;
+const teamOf = role => ROLES[role].team;
 
 function applyAction(room, player, action) {
   if (!player) fail('auth', '无效的玩家会话');
@@ -143,6 +220,15 @@ function applyAction(room, player, action) {
       player.ready = !!action.value;
       break;
     }
+    case 'config': {
+      need(room.status === 'lobby', 'bad_phase', '游戏开始后不能修改配置');
+      need(room.hostId === player.id, 'forbidden', '只有房主可以修改配置');
+      const next = cleanConfig(action.config, room.config);
+      need(next.size >= room.players.length, 'bad_config', `已有 ${room.players.length} 名玩家，人数不能少于此数`);
+      room.config = next;
+      room.players.forEach(p => { p.ready = false; }); // everyone re-confirms the new setup
+      break;
+    }
     case 'leave': {
       need(room.status === 'lobby', 'bad_phase', '游戏进行中不能离开房间');
       room.players = room.players.filter(p => p.id !== player.id);
@@ -150,9 +236,10 @@ function applyAction(room, player, action) {
       break;
     }
     case 'start': {
+      const size = room.config.size;
       need(room.status === 'lobby', 'bad_phase', '游戏已开始');
       need(room.hostId === player.id, 'forbidden', '只有房间创建者可以开始游戏');
-      need(room.players.length === PLAYER_COUNT, 'not_full', '需要 6 名玩家才能开始');
+      need(room.players.length === size, 'not_full', `需要 ${size} 名玩家才能开始`);
       need(room.players.every(p => p.ready), 'not_ready', '还有玩家未准备');
       startGame(room);
       break;
@@ -161,21 +248,29 @@ function applyAction(room, player, action) {
       needPhase('reveal');
       need(!g.acks.includes(player.id), 'duplicate', '你已确认身份');
       g.acks.push(player.id);
-      if (g.acks.length === PLAYER_COUNT) g.phase = 'team';
+      if (g.acks.length === g.size) g.phase = 'team';
       break;
     }
     case 'propose': {
       needPhase('team');
       need(leaderId(g) === player.id, 'forbidden', '只有当前队长可以提名队伍');
       const team = action.team;
-      const size = MISSION_SIZES[g.round];
+      const size = g.history[g.round].size;
       need(Array.isArray(team), 'bad_team', '无效的队伍');
       const uniq = [...new Set(team)];
       need(uniq.length === team.length && uniq.every(id => g.seats.includes(id)), 'bad_team', '队伍包含无效玩家');
       need(uniq.length === size, 'bad_team', `本轮必须选择 ${size} 人`);
       g.team = g.seats.filter(id => uniq.includes(id));
       g.votes = {};
-      g.phase = 'vote';
+      if (g.forced) {
+        // Forced round: the team goes straight to the mission without a vote.
+        g.history[g.round].attempts.push({ leader: leaderId(g), team: g.team.slice(), approve: 0, reject: 0, passed: true, forced: true });
+        g.forced = false;
+        g.cards = {};
+        g.phase = 'mission';
+      } else {
+        g.phase = 'vote';
+      }
       break;
     }
     case 'vote': {
@@ -183,7 +278,7 @@ function applyAction(room, player, action) {
       need(!(player.id in g.votes), 'duplicate', '你已经投过票');
       need(typeof action.approve === 'boolean', 'bad_vote', '无效的投票');
       g.votes[player.id] = action.approve;
-      if (Object.keys(g.votes).length === PLAYER_COUNT) resolveVote(room);
+      if (Object.keys(g.votes).length === g.size) resolveVote(room);
       break;
     }
     case 'mission': {
@@ -191,7 +286,7 @@ function applyAction(room, player, action) {
       need(g.team.includes(player.id), 'forbidden', '你不在本轮任务队伍中');
       need(!(player.id in g.cards), 'duplicate', '你已经提交过任务牌');
       need(action.card === 'success' || action.card === 'fail', 'bad_card', '无效的任务牌');
-      if (action.card === 'fail') need(ROLES[g.roles[player.id]].team === 'evil', 'forbidden', '好人只能提交成功牌');
+      if (action.card === 'fail') need(teamOf(g.roles[player.id]) === 'evil', 'forbidden', '好人只能提交成功牌');
       g.cards[player.id] = action.card;
       if (Object.keys(g.cards).length === g.team.length) resolveMission(room);
       break;
@@ -224,12 +319,12 @@ function applyAction(room, player, action) {
 function resolveVote(room) {
   const g = room.game;
   const approve = Object.values(g.votes).filter(v => v).length;
-  const passed = approve >= APPROVALS_NEEDED;
+  const passed = approve >= approvalsNeeded(g.size);
   g.history[g.round].attempts.push({
     leader: leaderId(g),
     team: g.team.slice(),
     approve,
-    reject: PLAYER_COUNT - approve,
+    reject: g.size - approve,
     passed,
   });
   g.votes = {};
@@ -240,16 +335,20 @@ function resolveVote(room) {
   }
   g.rejects++;
   g.team = [];
-  if (g.rejects >= MAX_REJECTS) return endGame(room, 'evil', '连续 5 次组队被否决');
+  if (g.rejects >= MAX_REJECTS) {
+    if (g.rejectRule === 'evil_wins') return endGame(room, 'evil', '连续 5 次组队被否决');
+    g.forced = true;
+  }
   nextLeader(g);
   g.phase = 'team';
 }
 
 function resolveMission(room) {
   const g = room.game;
+  const h = g.history[g.round];
   const failCount = Object.values(g.cards).filter(c => c === 'fail').length;
-  const success = failCount === 0;
-  g.history[g.round].result = {
+  const success = failCount < h.failsNeeded;
+  h.result = {
     team: g.team.slice(),
     successCards: g.team.length - failCount,
     failCards: failCount,
@@ -266,6 +365,38 @@ function resolveMission(room) {
   g.phase = 'team';
 }
 
+// Who a role sees at night, following the standard Avalon rules.
+function nightInfo(g, me) {
+  const role = g.roles[me];
+  const others = g.seats.filter(id => id !== me);
+  if (role === 'merlin') {
+    return { label: '你看到的坏人', ids: others.filter(id => teamOf(g.roles[id]) === 'evil' && g.roles[id] !== 'mordred'),
+      note: Object.values(g.roles).includes('mordred') ? '莫德雷德隐藏在坏人中，你看不到他。' : null };
+  }
+  if (role === 'percival') {
+    const hasMorgana = Object.values(g.roles).includes('morgana');
+    return { label: hasMorgana ? '梅林 / 莫甘娜（无法分辨）' : '梅林', ids: others.filter(id => ['merlin', 'morgana'].includes(g.roles[id])), note: null };
+  }
+  if (teamOf(role) === 'evil' && role !== 'oberon') {
+    return { label: '你的坏人同伴', ids: others.filter(id => teamOf(g.roles[id]) === 'evil' && g.roles[id] !== 'oberon'),
+      note: Object.values(g.roles).includes('oberon') ? '奥伯伦也是坏人，但你不知道他是谁。' : null };
+  }
+  return { label: null, ids: [], note: null };
+}
+
+function configView(config) {
+  const preset = presetFor(config);
+  return {
+    ...config,
+    presetName: preset.name,
+    rejectRuleName: REJECT_RULES[config.rejectRule],
+    roles: preset.roles,
+    good: BOARDS[config.size].good,
+    evil: BOARDS[config.size].evil,
+    presets: PRESETS[config.size].map(p => ({ id: p.id, name: p.name })),
+  };
+}
+
 // The only function that produces data for clients. It never includes other
 // players' tokens, roles, votes or mission cards except where the rules allow.
 function viewFor(room, player, online = new Set()) {
@@ -278,37 +409,41 @@ function viewFor(room, player, online = new Set()) {
     gameNo: room.gameNo,
     status: room.status,
     hostId: room.hostId,
+    config: configView(room.config),
     me: { id: player.id, name: player.name, isHost: room.hostId === player.id },
     players: order.map(id => {
       const p = room.players.find(x => x.id === id);
       return { id, name: p.name, ready: p.ready, online: online.has(id) };
     }),
-    missionSizes: MISSION_SIZES,
   };
   if (!g) return view;
 
   const role = g.roles[player.id];
   const info = ROLES[role];
-  let knows = [];
-  if (role === 'merlin') knows = g.seats.filter(id => ROLES[g.roles[id]].team === 'evil');
-  else if (info.team === 'evil') knows = g.seats.filter(id => id !== player.id && ROLES[g.roles[id]].team === 'evil');
+  const night = nightInfo(g, player.id);
   view.secret = {
     role,
     roleName: info.name,
     team: info.team,
     desc: info.desc,
-    knows: knows.map(id => ({ id, name: name(id) })),
-    knowsLabel: role === 'merlin' ? '你看到的坏人' : info.team === 'evil' ? '你的坏人同伴' : null,
+    knows: night.ids.map(id => ({ id, name: name(id) })),
+    knowsLabel: night.label,
+    note: night.note,
   };
 
   Object.assign(view, {
+    size: g.size,
+    rejectRule: g.rejectRule,
+    approvalsNeeded: approvalsNeeded(g.size),
     phase: g.phase,
     round: g.round + 1,
-    teamSize: MISSION_SIZES[g.round],
+    teamSize: g.history[g.round].size,
+    failsNeeded: g.history[g.round].failsNeeded,
     leaderId: leaderId(g),
     successes: g.successes,
     fails: g.fails,
     rejects: g.rejects,
+    forced: g.forced,
     team: g.team.slice(),
     history: g.history,
     acked: g.acks.slice(),
@@ -325,14 +460,12 @@ function viewFor(room, player, online = new Set()) {
     view.winner = g.winner;
     view.reason = g.reason;
     view.assassination = g.assassination;
-    view.reveal = g.seats.map(id => ({ id, name: name(id), role: g.roles[id], roleName: ROLES[g.roles[id]].name, team: ROLES[g.roles[id]].team }));
-  } else if (g.assassination) {
-    view.assassination = g.assassination;
+    view.reveal = g.seats.map(id => ({ id, name: name(id), role: g.roles[id], roleName: ROLES[g.roles[id]].name, team: teamOf(g.roles[id]) }));
   }
   return view;
 }
 
 module.exports = {
-  PLAYER_COUNT, MISSION_SIZES, ROLES, ROLE_DECK, GameError,
-  createRoom, addPlayer, applyAction, viewFor, findByToken, generateCode, isValidCode, cleanName,
+  MIN_PLAYERS, MAX_PLAYERS, BOARDS, PRESETS, ROLES, REJECT_RULES, DEFAULT_CONFIG, GameError,
+  createRoom, addPlayer, applyAction, viewFor, findByToken, generateCode, isValidCode, cleanName, cleanConfig, configView, presetFor,
 };

@@ -22,9 +22,29 @@ const streams = new Map(); // code -> Set<{res, playerId}>
 function load() {
   try {
     const list = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    for (const r of list) if (Date.now() - r.updatedAt < ROOM_TTL_MS) rooms.set(r.code, r);
+    for (const r of list) if (Date.now() - r.updatedAt < ROOM_TTL_MS) rooms.set(r.code, migrate(r));
   } catch { /* no saved state */ }
 }
+// Rooms saved by the fixed 6-player version have no config.
+function migrate(r) {
+  if (!r.config) r.config = { size: 6, preset: 'basic', rejectRule: 'evil_wins' };
+  const g = r.game;
+  if (g && !g.size) {
+    Object.assign(g, { size: 6, rejectRule: 'evil_wins', preset: 'basic', forced: false });
+    g.history.forEach(h => { h.failsNeeded = 1; });
+  }
+  return r;
+}
+
+// Everything the create-room screen needs to preview setups, from the engine's own tables.
+const OPTIONS = {
+  sizes: Object.keys(game.BOARDS).map(Number),
+  boards: game.BOARDS,
+  presets: game.PRESETS,
+  roles: Object.fromEntries(Object.entries(game.ROLES).map(([k, v]) => [k, { name: v.name, team: v.team }])),
+  rejectRules: game.REJECT_RULES,
+  defaults: game.DEFAULT_CONFIG,
+};
 let saveTimer = null;
 function save() {
   if (saveTimer) return;
@@ -126,7 +146,8 @@ function serveStatic(req, res, pathname) {
     const ext = path.extname(file);
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' || file.endsWith('sw.js') ? 'no-cache' : 'public, max-age=3600',
+      // App code must revalidate so a redeploy never leaves phones running stale JS; icons can cache.
+      'Cache-Control': ext === '.png' || ext === '.svg' ? 'public, max-age=86400' : 'no-cache',
       'X-Content-Type-Options': 'nosniff',
     });
     res.end(buf);
@@ -144,11 +165,15 @@ async function handle(req, res) {
   if (req.method === 'POST' && limited('post:' + ip, 60, 10000)) return send(res, 429, { error: 'rate', message: '操作过于频繁，请稍后再试' });
 
   try {
-    // POST /api/rooms  {name}
+    if (req.method === 'GET' && url.pathname === '/api/options') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
+      return res.end(JSON.stringify(OPTIONS));
+    }
+    // POST /api/rooms  {name, config}
     if (req.method === 'POST' && parts.length === 2 && parts[1] === 'rooms') {
       if (limited('create:' + ip, 10, 60000)) return send(res, 429, { error: 'rate', message: '创建房间过于频繁' });
       const body = await readBody(req);
-      const { room, player } = game.createRoom(game.generateCode(rooms), body.name);
+      const { room, player } = game.createRoom(game.generateCode(rooms), body.name, body.config);
       rooms.set(room.code, room);
       save();
       return send(res, 200, { code: room.code, token: player.token, playerId: player.id });
@@ -160,7 +185,7 @@ async function handle(req, res) {
     if (req.method === 'GET' && parts.length === 3) {
       if (limited('peek:' + ip, 60, 60000)) return send(res, 429, { error: 'rate', message: '请求过于频繁' });
       const room = getRoom(code);
-      return send(res, 200, { code, status: room.status, count: room.players.length });
+      return send(res, 200, { code, status: room.status, count: room.players.length, size: room.config.size });
     }
     // POST /api/rooms/:code/join  {name}
     if (req.method === 'POST' && parts[3] === 'join') {

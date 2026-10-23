@@ -49,7 +49,7 @@ test('E: a player only ever receives their own secret', async () => {
     assert.strictEqual(data.secret.role, room.game.roles[p.playerId]);
     const json = JSON.stringify(data);
     for (const o of players) if (o !== p) assert.ok(!json.includes(o.token));
-    assert.ok(!json.includes('"roles"'));
+    assert.ok(!json.includes('"roles":{'), 'the per-player role table never leaves the server');
   }
   // Without or with a forged token: rejected.
   assert.strictEqual((await call('GET', `/api/rooms/${code}/state`)).status, 401);
@@ -57,7 +57,7 @@ test('E: a player only ever receives their own secret', async () => {
   assert.strictEqual((await call('GET', `/api/rooms/zz/state`, null, players[0].token)).status, 404);
   // Public room peek reveals nothing secret.
   const peek = await call('GET', `/api/rooms/${code}`);
-  assert.deepStrictEqual(Object.keys(peek.data).sort(), ['code', 'count', 'status']);
+  assert.deepStrictEqual(Object.keys(peek.data).sort(), ['code', 'count', 'size', 'status']);
 });
 
 test('E: concurrent duplicate votes count once; non-leader cannot force results', async () => {

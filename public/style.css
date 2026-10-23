@@ -133,3 +133,23 @@ label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px
 .rules h3 { margin-top: 14px; }
 .rules ul { padding-left: 20px; margin: 4px 0; }
 .install { font-size: 14px; }
+
+/* room config editor */
+.sizes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+button.size {
+  width: 44px; height: 44px; min-height: 0; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  background: #c9d0dc; border: 2px solid transparent; color: #1b2a44; font-size: 18px;
+}
+button.size.on { background: var(--gold); border-color: var(--gold2); color: #1a1406; box-shadow: 0 0 10px rgba(212,175,55,.5); }
+button.size:disabled { opacity: .3; }
+.camp { font-weight: 700; margin: 10px 0 6px; }
+.camp.good { color: #8ec1ff; }
+.camp.evil { color: #ff8b84; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 8px 14px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #fff; border: 1px solid rgba(255,255,255,.15); }
+.chip.good { background: #24467f; }
+.chip.evil { background: #6e2a2a; }
+.cfgrow { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.cfgrow span { color: var(--muted); min-width: 72px; }
+.cfgrow b { flex: 1; color: var(--gold2); }
+.secret ul.unknown li { background: #6b5aa6; }
