@@ -80,15 +80,40 @@ function createApi(store, qrcode = require('qrcode')) {
     return r;
   }
 
+  // The store may serve a slightly outdated copy right after another instance wrote.
+  // Writing the unchanged room back with its etag succeeds only if that copy is current.
+  const isCurrent = (code, room, etag) => store.put(code, room, etag);
+  const backoff = attempt => sleep(15 + Math.random() * 60 * (attempt + 1));
+
   // Read-modify-write with optimistic concurrency. `mutate` runs on a fresh copy on every attempt.
+  // A successful write proves the action was validated against current state; a rejection is
+  // only reported once the room it was checked against is confirmed current.
   async function withRoom(code, mutate) {
     for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
       const { room, etag } = await loadRoom(code);
-      const result = mutate(room);
+      const pristine = JSON.stringify(room);
+      let result;
+      try {
+        result = mutate(room);
+      } catch (e) {
+        if (!(e instanceof game.GameError) || e.code === 'rate' || await isCurrent(code, JSON.parse(pristine), etag)) throw e;
+        await backoff(attempt);
+        continue;
+      }
       if (await store.put(code, room, etag)) return { room, result };
-      await sleep(15 + Math.random() * 60 * (attempt + 1));
+      await backoff(attempt);
     }
     return fail('busy', '服务器繁忙，请重试');
+  }
+
+  // Loads the room for a read-only request that must not act on an outdated copy (e.g. before
+  // telling a just-joined player they are not in the room).
+  async function loadRoomFor(code, check) {
+    for (let attempt = 0; ; attempt++) {
+      const r = await loadRoom(code);
+      if (check(r.room) || attempt === MAX_WRITE_ATTEMPTS - 1 || await isCurrent(code, r.room, r.etag)) return r;
+      await backoff(attempt);
+    }
   }
 
   function auth(room, req, url) {
@@ -148,7 +173,10 @@ function createApi(store, qrcode = require('qrcode')) {
     }
     // GET /api/rooms/:code/state  -> this player's view; polling it also marks the player online
     if (req.method === 'GET' && parts[3] === 'state') {
-      const [{ room }, presence] = await Promise.all([loadRoom(code), store.getPresence(code)]);
+      const token = req.headers.get('x-player-token') || url.searchParams.get('token');
+      const [{ room }, presence] = await Promise.all([
+        loadRoomFor(code, r => game.findByToken(r, token)), store.getPresence(code),
+      ]);
       const player = auth(room, req, url);
       if (!(Date.now() - (presence[player.id] || 0) < PRESENCE_REFRESH_MS)) {
         presence[player.id] = Date.now();

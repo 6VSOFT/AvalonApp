@@ -102,6 +102,50 @@ test('E: polling returns the personalised view and marks the player online', asy
   assert.strictEqual(r.data.state.me.id, leader.playerId);
 });
 
+test('an outdated read never turns a legal action or a valid player into an error', async () => {
+  const store = memoryStore();
+  const api = createApi(store);
+  const req = (method, p, body, token) => api(new Request('http://x' + p, {
+    method, headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Player-Token': token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  }), 'test-ip');
+  // Like Netlify Blobs right after another instance wrote: the next read may return the previous version.
+  const realGet = store.get;
+  let stale = null;
+  const serveStaleOnce = async code => { stale = await realGet(code); };
+  store.get = async code => { if (stale) { const s = stale; stale = null; return s; } return realGet(code); };
+
+  const host = await (await req('POST', '/api/rooms', { name: 'H', config: { size: 5 } })).json();
+  const join = name => req('POST', `/api/rooms/${host.code}/join`, { name }).then(r => r.json());
+
+  // 1. A just-joined player polls and gets a copy from before they joined: not a 401.
+  await serveStaleOnce(host.code);
+  const p2 = await join('P2');
+  stale = await realGet(host.code); // re-arm with a truly outdated copy (taken before P2's join below)
+  stale = { ...stale, room: { ...stale.room, players: stale.room.players.filter(p => p.id !== p2.playerId) }, etag: -1 };
+  const st = await req('GET', `/api/rooms/${host.code}/state`, null, p2.token);
+  assert.strictEqual(st.status, 200, 'a just-joined player is not told they left the room');
+
+  const ps = [host, p2];
+  for (let i = 3; i <= 5; i++) ps.push(await join('P' + i));
+  for (const p of ps) await req('POST', `/api/rooms/${host.code}/action`, { type: 'ready', value: true }, p.token);
+
+  // 2. Snapshot the lobby, start the game for real, then an ack reads the outdated lobby copy:
+  //    in that copy acking is illegal (no game yet), but it must still succeed.
+  const lobbyCopy = await realGet(host.code);
+  assert.strictEqual((await req('POST', `/api/rooms/${host.code}/action`, { type: 'start' }, host.token)).status, 200);
+  stale = lobbyCopy;
+  const ack = await req('POST', `/api/rooms/${host.code}/action`, { type: 'ack' }, ps[0].token);
+  assert.strictEqual(ack.status, 200, 'legal ack is not rejected because of an outdated read');
+  assert.strictEqual(stale, null, 'the outdated copy was actually served');
+  for (const p of ps.slice(1)) await req('POST', `/api/rooms/${host.code}/action`, { type: 'ack' }, p.token);
+  assert.strictEqual((await realGet(host.code)).room.game.phase, 'team');
+
+  // 3. A genuinely illegal action is still rejected once the room is confirmed current.
+  const again = await req('POST', `/api/rooms/${host.code}/action`, { type: 'ack' }, ps[0].token);
+  assert.strictEqual(again.status, 400);
+});
+
 test('a write that loses a race is retried on fresh state, never overwriting the other write', async () => {
   const store = memoryStore();
   const api = createApi(store);
