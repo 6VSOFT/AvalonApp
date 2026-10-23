@@ -9,7 +9,8 @@ const $net = document.getElementById('net');
 const SESSION_KEY = 'avalon.session';
 
 const ui = {
-  screen: 'home', // home | create | join | game
+  screen: 'home', // home | create | join | game | rules
+  rulesTab: 'rules',
   joinCode: '',
   state: null,
   selection: [],
@@ -24,6 +25,7 @@ const ui = {
   createConfig: null,
   createName: '',
 };
+try { ui.createName = (JSON.parse(localStorage.getItem('avalon.profile')) || {}).name || ''; } catch {}
 
 // ---------- utils ----------
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -149,21 +151,26 @@ function leaveToHome() {
 
 // ---------- views ----------
 function render() {
-  $app.innerHTML = ({ home: viewHome, create: viewCreate, join: viewJoin, game: viewGame })[ui.screen]();
+  $app.innerHTML = ({ home: viewHome, create: viewCreate, join: viewJoin, game: viewGame, rules: viewRules })[ui.screen]();
   updateNet();
 }
 
 function viewHome() {
   const s = loadSession();
+  const name = loadProfile().name;
   return `
     <h1>AVALON</h1>
-    <p class="center muted" style="margin-bottom:28px">阿瓦隆 · 5–10 人 · 无需法官</p>
+    <p class="center muted" style="margin-bottom:20px">阿瓦隆 · 5–10 人 · 线下聚会的全流程主持助手</p>
+    <div class="card profile" data-a="profile">
+      <span class="avatar">${name ? esc([...name][0]) : '?'}</span>
+      <div><b>${name ? esc(name) : '设置你的昵称'}</b><p class="muted" style="margin:2px 0 0">点击头像或名字可进行修改。</p></div>
+    </div>
     ${s ? `<div class="card gold stack"><p>你在房间 <b>${esc(s.code)}</b> 有一个进行中的会话。</p>
       <button data-a="resume">返回房间</button><button class="ghost" data-a="forget">放弃该会话</button></div>` : ''}
     <div class="stack">
       <button data-a="go-create" ${s ? 'disabled' : ''}>创建房间</button>
       <button class="secondary" data-a="go-join" ${s ? 'disabled' : ''}>加入房间</button>
-      <button class="ghost" data-a="rules">游戏规则</button>
+      <button class="ghost" data-a="rules">规则说明</button>
     </div>
     ${s ? '<p class="muted center" style="margin-top:10px">一台设备只能控制一名玩家。</p>' : ''}
     ${installHint()}`;
@@ -204,7 +211,7 @@ function configEditor(cfg, editable, minSize) {
   const chips = team => {
     const counts = {};
     preset.roles.filter(r => o.roles[r].team === team).forEach(r => { counts[r] = (counts[r] || 0) + 1; });
-    return Object.entries(counts).map(([r, n]) => `<span class="chip ${team}">${esc(o.roles[r].short)}${n > 1 ? ' x' + n : ''}</span>`).join('');
+    return Object.entries(counts).map(([r, n]) => `<span class="chip ${team}"><img class="role-chip" src="/roles/${esc(r)}.svg" alt="${esc(o.roles[r].name)}" width="22" height="22"><span>${esc(o.roles[r].short)}${n > 1 ? ' x' + n : ''}</span></span>`).join('');
   };
   const sizes = o.sizes.map(s => `<button type="button" class="size ${s === cfg.size ? 'on' : ''}" data-a="cfg-size" data-v="${s}"
     ${editable && s >= minSize ? '' : 'disabled'}>${s}</button>`).join('');
@@ -254,7 +261,7 @@ function viewJoin() {
     <h2>加入房间</h2>
     <form class="card stack" data-form="join">
       <div><label>房间代码</label><input class="code" name="code" maxlength="5" value="${esc(ui.joinCode)}" autocomplete="off" autocapitalize="characters" required></div>
-      <div><label>你的昵称</label><input name="name" maxlength="12" autocomplete="nickname" required ${ui.joinCode ? 'autofocus' : ''}></div>
+      <div><label>你的昵称</label><input name="name" maxlength="12" autocomplete="nickname" value="${esc(loadProfile().name || '')}" required ${ui.joinCode ? 'autofocus' : ''}></div>
       <button type="submit" ${ui.busy ? 'disabled' : ''}>加入</button>
     </form>`;
 }
@@ -333,6 +340,7 @@ function secretCard(st) {
   }
   return `<div class="card secret ${s.team}" data-a="toggle-secret">
     <div class="badge ${s.team}">${s.team === 'good' ? '好人阵营' : '坏人阵营'}</div>
+    <img class="role-art" src="/roles/${esc(s.role)}.svg" alt="${esc(s.roleName)}" width="140" height="140">
     <div class="role">${esc(s.roleName)}</div>
     <p>${esc(s.desc)}</p>
     ${s.knowsLabel ? `<p class="muted" style="margin-top:10px">${esc(s.knowsLabel)}：</p><ul class="${s.role === 'percival' ? 'unknown' : ''}">${s.knows.map(k => `<li>${esc(k.name)}</li>`).join('')}</ul>` : '<p class="muted">你不知道任何人的身份。</p>'}
@@ -472,7 +480,7 @@ function viewEnded(st) {
   return `
     <div class="banner ${good ? 'good' : 'evil'}"><h2>${good ? '好人阵营胜利' : '坏人阵营胜利'}</h2><p>${esc(st.reason)}</p></div>
     ${a ? `<div class="card"><h3>刺杀结果</h3><p>刺客选择了 <b>${esc(nameOf(st, a.target))}</b> —— ${a.hit ? '正是梅林！' : '不是梅林。'}</p></div>` : ''}
-    <div class="card"><h3>身份揭晓</h3><ul class="players">${st.reveal.map(r => `<li><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
+    <div class="card"><h3>身份揭晓</h3><ul class="players reveal">${st.reveal.map(r => `<li><img class="role-reveal" src="/roles/${esc(r.role)}.svg" alt="${esc(r.roleName)}" width="36" height="36"><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
       <span class="badge ${r.team}">${esc(r.roleName)}</span></li>`).join('')}</ul></div>
     <div class="card"><div class="score"><div class="g"><b>${st.successes}</b>成功任务</div><div class="e"><b>${st.fails}</b>失败任务</div></div>
       <table class="history"><tr><th>轮次</th><th>提名与投票</th><th>结果</th></tr>${historyRows(st)}</table></div>
@@ -482,34 +490,94 @@ function viewEnded(st) {
     </div>`;
 }
 
-function rulesModal() {
-  $modal.innerHTML = `<div class="card rules">
-    <h2>游戏规则（5–10 人）</h2>
-    <h3>人数与任务</h3>
-    <table class="history"><tr><th>人数</th><th>好/坏</th><th>各轮出任务人数</th></tr>
-      <tr><td>5</td><td>3/2</td><td>2 3 2 3 3</td></tr><tr><td>6</td><td>4/2</td><td>2 3 4 3 4</td></tr>
-      <tr><td>7</td><td>4/3</td><td>2 3 3 4* 4</td></tr><tr><td>8</td><td>5/3</td><td>3 4 4 5* 5</td></tr>
-      <tr><td>9</td><td>6/3</td><td>3 4 4 5* 5</td></tr><tr><td>10</td><td>6/4</td><td>3 4 4 5* 5</td></tr></table>
-    <p class="muted">* 7 人及以上，第 4 轮需要 2 张失败牌任务才失败；其余每轮 1 张即失败。</p>
-    <h3>角色</h3>
-    <ul><li><b>梅林</b>：看到所有坏人（莫德雷德除外）。</li>
-    <li><b>派西维尔</b>：看到梅林和莫甘娜，但分不清谁是谁。</li>
-    <li><b>忠臣</b>：没有特殊信息。</li>
-    <li><b>刺客</b>：好人三胜后刺杀梅林。</li>
-    <li><b>莫甘娜</b>：在派西维尔眼中像梅林。</li>
-    <li><b>莫德雷德</b>：梅林看不到他。</li>
-    <li><b>奥伯伦</b>：与其他坏人互不相识，但梅林看得到他。</li>
-    <li><b>爪牙</b>：普通坏人。坏人（奥伯伦除外）互相认识。</li></ul>
-    <h3>流程</h3>
-    <ul><li>队长按本轮人数提名队员，可以选自己。</li>
-    <li>全员投票，超过半数赞成才通过；否决则队长顺时针移交。</li>
-    <li>连续 5 次否决：按房间规则，坏人直接获胜，或进入强制轮（下一位队长组队后跳过投票直接出任务）。</li>
-    <li>队员秘密提交任务牌。好人只能出成功；坏人可出成功或失败。只公布成功/失败牌数量。</li>
-    <li>3 次任务失败：坏人获胜。</li>
-    <li>3 次任务成功：刺客刺杀梅林。猜中则坏人获胜，否则好人获胜。</li></ul>
-    <h3>注意</h3>
-    <ul><li>每人使用自己的手机，不要给他人看你的身份。</li><li>讨论在现实中面对面进行。</li></ul>
-    <button style="margin-top:14px" data-a="close-modal">知道了</button></div>`;
+const RULE_TABS = [['rules', '游戏规则'], ['roles', '角色介绍'], ['faq', '常见问答']];
+
+// Rules screen with three tabs. Board, preset and role data come from /api/options.
+function viewRules() {
+  const o = ui.options;
+  const tabs = RULE_TABS.map(([id, label]) => `<button class="tab ${ui.rulesTab === id ? 'on' : ''}" data-a="rules-tab" data-v="${id}">${label}</button>`).join('');
+  let body = '<p class="center muted">正在加载…</p>';
+  if (o && ui.rulesTab === 'rules') body = rulesTab(o);
+  if (o && ui.rulesTab === 'roles') body = rolesTab(o);
+  if (ui.rulesTab === 'faq') body = faqTab();
+  return `
+    <div class="topbar"><button class="small ghost" data-a="home">← 返回</button><h2 style="margin:0">规则说明</h2><span style="width:64px"></span></div>
+    <div class="tabs">${tabs}</div>
+    <div class="rules">${body}</div>`;
+}
+
+function lineup(o, roles) {
+  const counts = {};
+  roles.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+  return Object.entries(counts).map(([r, n]) => o.roles[r].short + (n > 1 ? `×${n}` : '')).join('、');
+}
+
+function rulesTab(o) {
+  const boards = o.sizes.map(n => `<tr><td>${n}人</td><td>${o.boards[n].good} / ${o.boards[n].evil}</td>
+    <td>${o.boards[n].missions.map((m, i) => (n >= 7 && i === 3 ? `${m}*` : m)).join(' · ')}</td></tr>`).join('');
+  const presets = o.sizes.map(n => `<p><b>${n}人局：</b>${esc(lineup(o, o.presets[n][0].roles))}</p>`).join('');
+  return `
+    <div class="card"><h3>阵营胜利条件</h3>
+      <p><span class="badge good">蓝方</span> 5 次任务中，达成 3 次任务成功，且刺客没有刺中梅林。</p>
+      <p><span class="badge evil">红方</span> 5 次任务中，造成 3 次任务失败；或在蓝方 3 次成功后的刺杀阶段刺中梅林。</p></div>
+    <div class="card"><h3>游戏流程</h3><ol>
+      <li>查看身份：每人在自己手机上私下查看角色和夜间信息。</li>
+      <li>队长选择执行任务的队伍（可以选自己）。</li>
+      <li>全员投票决定是否通过该队伍，超过半数赞成才通过。</li>
+      <li>队员秘密出成功 / 失败牌，好人只能出成功。</li>
+      <li>公开任务结果（只公布牌数），进入下一轮，队长顺延。</li></ol></div>
+    <div class="card"><h3>任务人数</h3>
+      <table class="history"><tr><th>人数</th><th>蓝 / 红</th><th>第 1–5 轮出任务人数</th></tr>${boards}</table>
+      <p class="muted" style="margin-top:8px">* 7 人及以上第 4 轮需要 2 张失败牌任务才失败，其余每轮 1 张即失败。</p></div>
+    <div class="card"><h3>阵容表（标准局）</h3>${presets}
+      <p class="muted">创建房间时可以切换其他预设。</p></div>
+    <div class="card"><h3>特殊规则</h3><ul>
+      <li>7 人及以上第 4 次任务需要 2 张失败才算失败。</li>
+      <li>5 连流局：连续 5 次组队投票未通过时，可选「红方直接获胜」或「进入强制轮」。</li></ul></div>`;
+}
+
+function rolesTab(o) {
+  const card = r => {
+    const role = o.roles[r];
+    return `<div class="role-card ${role.team}">
+      <img src="/roles/${esc(r)}.svg" alt="${esc(role.name)}" width="72" height="72">
+      <div><h3>${esc(role.short)}</h3>
+        <p><span class="muted">阵营：</span><b class="team-${role.team}">${role.team === 'good' ? '蓝方' : '红方'}</b></p>
+        <p><span class="muted">能力：</span>${esc(role.ability)}</p>
+        <p><span class="muted">打法：</span>${esc(role.tip)}</p></div></div>`;
+  };
+  const ids = Object.keys(o.roles);
+  return `<h3 class="camp good">蓝方阵营</h3>${ids.filter(r => o.roles[r].team === 'good').map(card).join('')}
+    <h3 class="camp evil">红方阵营</h3>${ids.filter(r => o.roles[r].team === 'evil').map(card).join('')}`;
+}
+
+function faqTab() {
+  const qa = [
+    ['如何选择人数？', '创建房间时点击数字选择 5–10 人，房主在大厅也可以调整。'],
+    ['角色预设是什么？', '针对不同人数预设好的角色组合，也可以切换其他预设。'],
+    ['5 连流局规则是什么？', '连续 5 次组队提案未通过时的处理方式：红方直接获胜（默认），或进入强制轮。'],
+    ['什么是强制轮？', '触发 5 连流局后，队长顺延给下一位玩家，由他重新选择队伍并直接执行任务，跳过投票阶段。'],
+    ['任务结果会公开谁出的失败吗？', '不会，只公开成功 / 失败和失败牌数量，保护红方身份。'],
+    ['需要法官吗？', '不需要。每人用自己的手机查看身份、投票和出任务牌，系统自动结算。'],
+    ['刷新页面或断线会怎样？', '重新打开即可回到房间，身份和已提交的操作都会保留。'],
+  ];
+  return `<div class="card"><h3>房间可改配置</h3><p>创建房间后，房主可以在大厅调整：</p>
+      <ul><li>房间人数（5–10 人）</li><li>角色预设（多种阵容选择）</li><li>5 连流局规则（红方直接获胜 / 进入强制轮）</li></ul>
+      <p class="muted">修改后所有玩家需要重新准备。</p></div>
+    ${qa.map(([q, a], i) => `<div class="card"><h3>Q${i + 1}：${q}</h3><p>A：${a}</p></div>`).join('')}`;
+}
+
+// ---------- profile (nickname remembered on this device) ----------
+const PROFILE_KEY = 'avalon.profile';
+function loadProfile() { try { return JSON.parse(localStorage.getItem(PROFILE_KEY)) || {}; } catch { return {}; } }
+function saveProfile(p) { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch {} }
+function profileModal() {
+  const p = loadProfile();
+  $modal.innerHTML = `<form class="card stack" data-form="profile">
+    <h3>设置昵称</h3>
+    <div><label>你的昵称（最多 12 个字）</label><input name="name" maxlength="12" autocomplete="nickname" value="${esc(p.name || '')}" required autofocus></div>
+    <div class="grid2"><button type="button" class="ghost" data-a="close-modal">取消</button><button type="submit">保存</button></div>
+  </form>`;
   $modal.classList.remove('hidden');
 }
 function secretModal() {
@@ -539,7 +607,9 @@ document.addEventListener('click', async e => {
     case 'cfg-rule': changeConfig('rule'); break;
     case 'go-join': ui.screen = 'join'; render(); break;
     case 'home': ui.screen = 'home'; render(); break;
-    case 'rules': rulesModal(); break;
+    case 'rules': ui.screen = 'rules'; render(); scrollTo(0, 0); break;
+    case 'rules-tab': ui.rulesTab = el.dataset.v; render(); scrollTo(0, 0); break;
+    case 'profile': profileModal(); break;
     case 'close-modal': $modal.classList.add('hidden'); $modal._redraw = null; ui.showSecret = false; render(); break;
     case 'secret': secretModal(); break;
     case 'toggle-secret':
@@ -599,6 +669,14 @@ document.addEventListener('submit', async e => {
   const kind = form.dataset.form;
   const name = form.name.value.trim();
   if (!name) return toast('请输入昵称');
+  if (kind === 'profile') {
+    saveProfile({ ...loadProfile(), name });
+    ui.createName = name;
+    $modal.classList.add('hidden');
+    render();
+    return;
+  }
+  saveProfile({ ...loadProfile(), name }); // remember the last nickname used to create or join
   ui.busy = true;
   form.querySelector('button').disabled = true;
   try {

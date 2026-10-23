@@ -42,7 +42,7 @@ const OPTIONS = {
   sizes: Object.keys(game.BOARDS).map(Number),
   boards: game.BOARDS,
   presets: game.PRESETS,
-  roles: Object.fromEntries(Object.entries(game.ROLES).map(([k, v]) => [k, { name: v.name, short: v.short, team: v.team }])),
+  roles: Object.fromEntries(Object.entries(game.ROLES).map(([k, v]) => [k, { name: v.name, short: v.short, team: v.team, ability: v.ability, tip: v.tip }])),
   rejectRules: game.REJECT_RULES,
   defaults: game.DEFAULT_CONFIG,
 };

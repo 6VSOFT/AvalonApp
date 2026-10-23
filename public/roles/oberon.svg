@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <title>奥伯伦：孤环中的鹿角游魂</title>
+  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#fff0e9" stroke="#713126" stroke-width="4"/>
+  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#efab8b" stroke-width="2"/>
+  <path d="M40 92a43 43 0 0 0 80 0M40 61a43 43 0 0 1 11-16m69 16a43 43 0 0 0-11-16" stroke="#e6653d" stroke-width="4" stroke-linecap="round"/>
+  <path d="m65 73-16-20-2-19m3 21-15-7m60 25 16-20 2-19m-3 21 15-7" stroke="#713126" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m80 58 23 23-6 25-17 18-17-18-6-25Z" fill="#fff" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m80 64 16 19-5 21-11 12Z" fill="#f7c2a8"/>
+  <path d="m68 85 6 5m18-5-6 5m-6 11v8" stroke="#b63d26" stroke-width="4" stroke-linecap="round"/>
+  <path d="m80 30 5 8-5 8-5-8Z" fill="#e6653d"/>
+</svg>

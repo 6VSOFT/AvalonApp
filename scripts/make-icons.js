@@ -5,8 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const BG = [11, 21, 48];
-const GOLD = [212, 175, 55];
+const BG = [243, 247, 252];
+const NAVY = [18, 51, 103];
+const BLUE = [23, 100, 220];
+const WHITE = [255, 255, 255];
 
 function crc32(buf) {
   let c, crc = 0xffffffff;
@@ -32,18 +34,33 @@ function inPoly(x, y, pts) {
   return inside;
 }
 const CROWN = [[146, 316], [166, 196], [216, 246], [256, 166], [296, 246], [346, 196], [366, 316]];
+const FRAME = [[256, 64], [422, 160], [422, 352], [256, 448], [90, 352], [90, 160]];
+const FACE = [[256, 80], [408, 168], [408, 344], [256, 432], [104, 344], [104, 168]];
+
+function colorAt(x, y) {
+  let c = BG;
+  if ((x >= 56 && x <= 456 && Math.abs(y - 256) <= 4) ||
+      (y >= 40 && y <= 472 && Math.abs(x - 256) <= 4)) c = NAVY;
+  if (inPoly(x, y, FRAME)) c = NAVY;
+  if (inPoly(x, y, FACE)) c = BLUE;
+  if (inPoly(x, y, CROWN) || (x >= 146 && x <= 366 && y >= 330 && y <= 356)) c = WHITE;
+  if ([[56, 256], [456, 256], [256, 40], [256, 472]].some(([cx, cy]) => Math.hypot(x - cx, y - cy) <= 10)) c = BLUE;
+  return c;
+}
 
 function render(size) {
   const raw = Buffer.alloc((size * 4 + 1) * size);
   for (let py = 0; py < size; py++) {
     raw[py * (size * 4 + 1)] = 0;
     for (let px = 0; px < size; px++) {
-      const x = ((px + 0.5) / size) * 512, y = ((py + 0.5) / size) * 512;
-      const d = Math.hypot(x - 256, y - 256);
-      const gold = Math.abs(d - 170) <= 11 || inPoly(x, y, CROWN) || (x >= 146 && x <= 366 && y >= 330 && y <= 356);
-      const c = gold ? GOLD : BG;
+      // Four subpixels keep the diagonal emblem edges crisp at both icon sizes.
+      const c = [0, 0, 0];
+      for (const dy of [.25, .75]) for (const dx of [.25, .75]) {
+        const sample = colorAt(((px + dx) / size) * 512, ((py + dy) / size) * 512);
+        for (let i = 0; i < 3; i++) c[i] += sample[i] / 4;
+      }
       const o = py * (size * 4 + 1) + 1 + px * 4;
-      raw[o] = c[0]; raw[o + 1] = c[1]; raw[o + 2] = c[2]; raw[o + 3] = 255;
+      raw[o] = Math.round(c[0]); raw[o + 1] = Math.round(c[1]); raw[o + 2] = Math.round(c[2]); raw[o + 3] = 255;
     }
   }
   const ihdr = Buffer.alloc(13);

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <title>莫甘娜：月环中的幻影面具</title>
+  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#fff0e9" stroke="#713126" stroke-width="4"/>
+  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#efab8b" stroke-width="2"/>
+  <path d="M108 34a49 49 0 1 0 18 73 44 44 0 0 1-18-73Z" fill="#e6653d" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m55 57 25 10 25-10-4 38-21 24-21-24Z" fill="#fff" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m80 67 25-10-4 38-21 24Z" fill="#f7c2a8"/>
+  <path d="m65 80 9 5m21-5-9 5m-6 9v9" stroke="#713126" stroke-width="4" stroke-linecap="round"/>
+  <path d="m117 39 4 10 10 4-10 4-4 10-4-10-10-4 10-4Z" fill="#b63d26"/>
+</svg>

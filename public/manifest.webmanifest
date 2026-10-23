@@ -1,13 +1,13 @@
 {
-  "name": "Avalon 阿瓦隆 · 6人局",
+  "name": "Avalon 阿瓦隆 · 5–10人",
   "short_name": "Avalon",
-  "description": "无需法官的阿瓦隆 6 人局",
+  "description": "无需法官的阿瓦隆 5–10 人局",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b1530",
-  "theme_color": "#0b1530",
+  "background_color": "#f3f7fc",
+  "theme_color": "#f3f7fc",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },

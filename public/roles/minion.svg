@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <title>爪牙：三道利爪的效忠印记</title>
+  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#fff0e9" stroke="#713126" stroke-width="4"/>
+  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#efab8b" stroke-width="2"/>
+  <path d="m80 31 41 23-9 53-32 25-32-25-9-53Z" fill="#713126" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m80 40 32 18-8 44-24 20Z" fill="#b63d26"/>
+  <path d="m58 53 10 13-4 42-10-15Zm22-8 9 17-9 54-9-54Zm22 8 4 40-10 15-4-42Z" fill="#fff" stroke="#e6653d" stroke-width="2" stroke-linejoin="round"/>
+  <path d="m28 75 8 5-8 5m104-10-8 5 8 5" stroke="#b63d26" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="80" cy="140" r="3" fill="#e6653d"/>
+</svg>

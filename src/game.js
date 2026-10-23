@@ -22,16 +22,16 @@ const BOARDS = {
 };
 const failsNeeded = (size, round) => (size >= 7 && round === 3 ? 2 : 1);
 
-// `short` is the label used on the role preview chips.
+// `short` labels the preview chips; `ability` and `tip` are the public role guide.
 const ROLES = {
-  merlin: { name: '梅林 Merlin', short: '梅林', team: 'good', desc: '你知道坏人是谁（莫德雷德除外），但不能暴露自己。好人三次任务成功后，刺客会尝试刺杀你。' },
-  percival: { name: '派西维尔 Percival', short: '派西维尔', team: 'good', desc: '你会看到梅林和莫甘娜，但无法分辨谁是真梅林。你的任务是保护梅林。' },
-  servant: { name: '亚瑟的忠臣 Loyal Servant', short: '忠臣', team: 'good', desc: '你没有特殊能力。通过讨论与投票找出坏人，只能提交成功牌。' },
-  assassin: { name: '刺客 Assassin', short: '刺客', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌。若好人完成三次任务，由你刺杀梅林。' },
-  morgana: { name: '莫甘娜 Morgana', short: '莫甘娜', team: 'evil', desc: '你在派西维尔眼中看起来像梅林。认识你的同伴，可以提交成功或失败牌。' },
-  mordred: { name: '莫德雷德 Mordred', short: '莫德雷德', team: 'evil', desc: '梅林看不到你。你认识你的同伴，可以提交成功或失败牌。' },
-  oberon: { name: '奥伯伦 Oberon', short: '奥伯伦', team: 'evil', desc: '你不认识其他坏人，他们也不认识你，但梅林能看到你。可以提交成功或失败牌。' },
-  minion: { name: '莫德雷德爪牙 Minion', short: '爪牙', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌，帮助任务失败。' },
+  merlin: { name: '梅林 Merlin', short: '梅林', ability: '看见红方，但看不见莫德雷德', tip: '谨慎引导好人完成任务，但避免暴露身份被刺杀', team: 'good', desc: '你知道坏人是谁（莫德雷德除外），但不能暴露自己。好人三次任务成功后，刺客会尝试刺杀你。' },
+  percival: { name: '派西维尔 Percival', short: '派西维尔', ability: '看到梅林与莫甘娜两名候选', tip: '通过发言和投票辨别真正的梅林，帮助蓝方阵营', team: 'good', desc: '你会看到梅林和莫甘娜，但无法分辨谁是真梅林。你的任务是保护梅林。' },
+  servant: { name: '亚瑟的忠臣 Loyal Servant', short: '忠臣', ability: '无特殊视野', tip: '通过讨论、投票和任务结果找出红方', team: 'good', desc: '你没有特殊能力。通过讨论与投票找出坏人，只能提交成功牌。' },
+  assassin: { name: '刺客 Assassin', short: '刺客', ability: '在蓝方达成 3 次成功后刺杀梅林', tip: '帮助红方让任务失败，或在最后刺中梅林', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌。若好人完成三次任务，由你刺杀梅林。' },
+  morgana: { name: '莫甘娜 Morgana', short: '莫甘娜', ability: '伪装成梅林出现在派西维尔的视野中', tip: '模仿梅林的发言，误导派西维尔和蓝方', team: 'evil', desc: '你在派西维尔眼中看起来像梅林。认识你的同伴，可以提交成功或失败牌。' },
+  mordred: { name: '莫德雷德 Mordred', short: '莫德雷德', ability: '对梅林隐藏身份', tip: '大胆带队，梅林看不见你', team: 'evil', desc: '梅林看不到你。你认识你的同伴，可以提交成功或失败牌。' },
+  oberon: { name: '奥伯伦 Oberon', short: '奥伯伦', ability: '与其他红方互不相认，但梅林能看见你', tip: '独立行动扰乱局势', team: 'evil', desc: '你不认识其他坏人，他们也不认识你，但梅林能看到你。可以提交成功或失败牌。' },
+  minion: { name: '莫德雷德爪牙 Minion', short: '爪牙', ability: '无特殊能力，认识其他红方', tip: '配合其他红方，让任务失败', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌，帮助任务失败。' },
 };
 
 const rep = (role, n) => Array(n).fill(role);

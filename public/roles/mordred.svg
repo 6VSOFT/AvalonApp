@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <title>莫德雷德：封闭面甲与断裂王冠</title>
+  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#fff0e9" stroke="#713126" stroke-width="4"/>
+  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#efab8b" stroke-width="2"/>
+  <path d="m48 62-6-30 25 17 13-23 13 23 25-17-6 30Z" fill="#e6653d" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m80 57 32 12-4 40-28 23-28-23-4-40Z" fill="#713126" stroke="#713126" stroke-width="5" stroke-linejoin="round"/>
+  <path d="m80 63 25 10-4 32-21 18Z" fill="#b63d26"/>
+  <path d="m59 79 21 7 21-7" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M80 88v31m-13-21v11m26-11v11" stroke="#e6653d" stroke-width="4" stroke-linecap="round"/>
+  <path d="m83 28-7 15 10 6-6 11" stroke="#fff0e9" stroke-width="4"/>
+</svg>

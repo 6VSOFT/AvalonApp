@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <title>刺客：隐于兜帽的利刃</title>
+  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#fff0e9" stroke="#713126" stroke-width="4"/>
+  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#efab8b" stroke-width="2"/>
+  <path d="M36 112 47 64l33-33 33 33 11 48-44 22Z" fill="#713126" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m80 43 23 29-23-11-23 11Z" fill="#e6653d"/>
+  <path d="m54 78 17 5m35-5-17 5" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <path d="m80 76 10 27-10 16-10-16Z" fill="#fff" stroke="#e6653d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M64 105h32m-16 15v13" stroke="#e6653d" stroke-width="5" stroke-linecap="round"/>
+  <path d="m30 49 9 5m91-5-9 5" stroke="#b63d26" stroke-width="3"/>
+</svg>

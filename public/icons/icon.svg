@@ -1,6 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0b1530"/>
-  <circle cx="256" cy="256" r="170" fill="none" stroke="#d4af37" stroke-width="22"/>
-  <path d="M146 316 L166 196 L216 246 L256 166 L296 246 L346 196 L366 316 Z" fill="#d4af37"/>
-  <rect x="146" y="330" width="220" height="26" rx="6" fill="#d4af37"/>
+  <title>Avalon：蓝色王冠与六角回路</title>
+  <rect width="512" height="512" fill="#f3f7fc"/>
+  <path d="M56 256h400M256 40v432" stroke="#123367" stroke-width="8"/>
+  <path d="m256 64 166 96v192L256 448 90 352V160Z" fill="#123367"/>
+  <path d="m256 80 152 88v176L256 432 104 344V168Z" fill="#1764dc"/>
+  <path d="m146 316 20-120 50 50 40-80 40 80 50-50 20 120Z" fill="#fff"/>
+  <path d="M146 330h220v26H146Z" fill="#fff"/>
+  <g fill="#1764dc">
+    <circle cx="56" cy="256" r="10"/><circle cx="456" cy="256" r="10"/>
+    <circle cx="256" cy="40" r="10"/><circle cx="256" cy="472" r="10"/>
+  </g>
 </svg>
