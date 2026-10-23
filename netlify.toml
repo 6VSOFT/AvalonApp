@@ -1,0 +1,30 @@
+[build]
+  publish = "public"
+  command = "npm test"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Join links (/r/CODE) are handled by the single-page app.
+[[redirects]]
+  from = "/r/*"
+  to = "/index.html"
+  status = 200
+
+# App code must revalidate so a redeploy never leaves phones running stale JS.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/roles/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

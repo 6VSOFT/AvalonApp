@@ -6,12 +6,12 @@ Guidance for coding agents (OpenAI Codex and others) working in this repository.
 
 A judge-free **Avalon (阿瓦隆)** PWA for 5–10 players sitting at the same table, each on their own phone. The app replaces the moderator, role cards, vote tokens and mission cards. Players still talk face to face; the app only deals secret roles, runs the phases, collects votes and mission cards, and decides the winner.
 
-Stack: plain Node.js (no framework) + Server-Sent Events + vanilla JS frontend. One runtime dependency (`qrcode`). Deployed on Render as a single long-running instance (`render.yaml`).
+Stack: plain Node.js (no framework) + vanilla JS frontend that polls the server every 1.5 s. Runtime dependencies: `qrcode`, `@netlify/blobs`. **Production runs on Netlify** (project `avaloapp`): `public/` is the static site and `/api/*` is a Netlify Function backed by Netlify Blobs (`netlify.toml`). `npm start` runs the same API locally with an in-memory store.
 
 ## Commands
 
 ```bash
-npm install          # Node 18+ (Render uses 20)
+npm install          # Node 18+
 npm start            # http://localhost:3000  (PORT, DATA_FILE env vars)
 npm test             # node:test, all tests in test/*.test.js
 node scripts/make-icons.js   # only if you change the icon shapes
@@ -24,12 +24,15 @@ Run `npm test` before every commit. All tests must pass.
 | Path | Role |
 |---|---|
 | `src/game.js` | Rules engine. Boards (`BOARDS`), roles (`ROLES`), presets (`PRESETS`), 5-rejection rules (`REJECT_RULES`), `applyAction()` (the only place state changes), `viewFor()` (the only place client data is built). Pure, no I/O. |
-| `server.js` | HTTP routes, SSE broadcast, rate limits, JSON persistence + `migrate()` for old saved rooms, QR codes, static files. |
-| `public/app.js` | Whole client: rendering, events, session in `localStorage`, SSE reconnect. |
+| `src/api.js` | All `/api` routes as a web `Request` → `Response` handler, independent of hosting. Rooms come from a pluggable store; `withRoom()` does read-modify-write with compare-and-set on the room's etag and retries on conflict. Also `migrate()` for old saved rooms, rate limits, QR codes, presence (online dots), and `memoryStore()`. |
+| `netlify/functions/api.mjs` | Production: the shared API on Netlify Blobs (`rooms` and `presence` stores, strong consistency, `onlyIfMatch`/`onlyIfNew` writes). |
+| `netlify/functions/cleanup.mjs` | Hourly scheduled function deleting rooms idle for 12 h. |
+| `server.js` | Local server: static files + the shared API on an in-memory store saved to `data/rooms.json`. |
+| `public/app.js` | Whole client: rendering, events, session in `localStorage`, polling `GET /api/rooms/:code/state` (1.5 s visible, 8 s hidden). |
 | `public/style.css`, `index.html`, `manifest.webmanifest`, `sw.js`, `icons/` | PWA shell. Blue/white "tech" style; the palette is CSS variables on `:root`. |
 | `public/roles/<role>.svg` | Original role artwork, one per role id in `ROLES`. Good roles blue, evil roles red/orange, same hexagon frame. A new role needs a new SVG and an entry in `SHELL` in `sw.js`. |
 | `test/game.test.js` | Engine tests (rules, presets, secrecy of views). |
-| `test/server.test.js` | HTTP tests (auth, secrecy over the wire, concurrent duplicate requests, SSE). |
+| `test/server.test.js` | HTTP tests (auth, secrecy over the wire, concurrent requests, polling, and a forced write conflict that must retry without losing either write). |
 
 ## Hard rules
 
@@ -39,9 +42,9 @@ Secret information is the core of the game. Breaking these rules ruins real game
 2. **Only `viewFor()` produces client data.** It must never include: another player's token, the full `roles` table, other players' roles (before the game ends), individual votes before everyone has voted, or individual mission cards (only counts, after all cards are in). If you add a field to game state, decide explicitly whether `viewFor()` may expose it.
 3. **Every new action or rule needs a test**, including the illegal cases (wrong phase, wrong player, duplicate submit). Secrecy changes need a test asserting what a player can *not* see.
 4. **Rules data lives in `src/game.js` only.** The client reads boards, presets, role names and the role guide text (`ability`, `tip`) from `GET /api/options`; do not duplicate those tables in `public/app.js`. `test/game.test.js` pins the official mission table and the agreed preset line-ups. Change those tests only when the rules are meant to change.
-5. **Actions must be idempotent-safe.** A repeated or concurrent request must be rejected (`GameError` with code `duplicate` → HTTP 409), never counted twice. Node runs each action synchronously; keep `applyAction()` free of `await`.
-6. **Don't break saved rooms.** Rooms persist to `data/rooms.json`. If you change the state shape, extend `migrate()` in `server.js`.
-7. **Single instance.** State is in memory plus one JSON file. Don't introduce anything that assumes multiple instances or serverless.
+5. **Actions must be idempotent-safe.** A repeated or concurrent request must be rejected (`GameError` with code `duplicate` → HTTP 409), never counted twice. Every state change goes through `withRoom()` in `src/api.js`, which only commits if nobody else wrote in between; on conflict it re-reads and re-runs the action, so validation always sees current state. Keep `applyAction()` synchronous and free of side effects outside the room object.
+6. **Don't break saved rooms.** Rooms persist in Netlify Blobs (and `data/rooms.json` locally). If you change the state shape, extend `migrate()` in `src/api.js`.
+7. **Stateless functions.** On Netlify every request may hit a different instance. Never keep game state in module variables; read and write it through the store.
 
 ## Game rules implemented
 
@@ -60,7 +63,7 @@ Secret information is the core of the game. Breaking these rules ruins real game
 - Mobile first: check layouts at 375px width; buttons stay large (≥44px).
 - App code is served `no-cache` so redeploys reach phones immediately; bump `CACHE` in `public/sw.js` when you change the shell file list.
 - No new dependencies without a clear need.
-- Every push to `main` redeploys on Render and restarts the server, which drops games in progress on the free plan. Keep `main` deployable.
+- Deploys don't lose rooms (they live in Blobs), but a deploy with a breaking state change will hit games in progress. Keep `main` deployable; the Netlify build runs `npm test`.
 
 ## Testing a full game by hand
 

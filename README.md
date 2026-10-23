@@ -12,38 +12,42 @@ npm test           # 自动化测试
 
 需要 Node.js 18+。环境变量：`PORT`（默认 3000），`DATA_FILE`（房间持久化文件，默认 `data/rooms.json`）。
 
-手机与电脑在同一 Wi-Fi 下时，用 `http://<电脑局域网IP>:3000` 访问。PWA 安装（添加到主屏幕）和 Service Worker 需要 HTTPS 或 localhost，正式使用请部署到带 HTTPS 的主机（Render、Railway、Fly.io、任意 VPS + Caddy 等）。注意：本服务使用长连接（SSE）和内存状态，应部署为**单实例常驻 Node 进程**，不适合无状态 Serverless（如 Vercel Functions、GitHub Pages）。
+手机与电脑在同一 Wi-Fi 下时，可以用 `http://<电脑局域网IP>:3000` 在本地试玩。
 
-## 部署到 Render（HTTPS）
+## 部署（Netlify）
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/6VSOFT/AvalonApp)
+正式环境部署在 Netlify 项目 **avaloapp**：https://avaloapp.netlify.app
 
-点击上方按钮，用 GitHub 登录 Render，确认 `render.yaml` 中的服务后点 **Apply**。几分钟后得到 `https://avalon-xxxx.onrender.com`，6 台手机直接打开即可，每次推送到 `main` 会自动重新部署。
+* `public/` 作为静态网站发布；`/api/*` 由 Netlify Function（`netlify/functions/api.mjs`）处理。
+* 房间状态存放在 Netlify Blobs。每次写入都带上读取时的版本号（etag），只有在没人同时修改时才会成功，否则重新读取并重新校验，所以并发投票不会丢失或重复计数。
+* 手机每 1.5 秒向服务器查询一次最新状态（页面在后台时 8 秒一次），所以界面更新最多有约 1.5 秒延迟。
+* `cleanup` 定时函数每小时删除闲置超过 12 小时的房间。
+* 构建时会先运行 `npm test`，测试不通过就不会发布。
 
-免费方案的限制：
-* 闲置约 15 分钟后休眠，下次打开需等待约 30–60 秒唤醒（游戏进行中有实时连接，不会休眠）。
-* 没有持久磁盘：服务重启或重新部署后，进行中的房间会丢失。不要在对局中推送新代码。需要持久化时可升级付费方案并挂载磁盘，把 `DATA_FILE` 指向磁盘路径。
+本地运行 `npm start` 使用同一套 API 代码，只是把房间放在内存里并保存到 `data/rooms.json`。
 
 ## 架构
 
 | 文件 | 作用 |
 |---|---|
 | `src/game.js` | 规则引擎：角色分配、组队、投票、任务、刺杀、胜负判定，以及按玩家过滤的视图 `viewFor()` |
-| `server.js` | HTTP API + SSE 实时推送、限流、持久化、二维码 |
-| `public/` | PWA 前端（原生 JS），manifest、Service Worker、图标 |
-| `test/` | 规则引擎单元测试 + HTTP 端到端安全测试 |
+| `src/api.js` | 所有 `/api` 接口：校验、并发安全写入（`withRoom()`）、限流、二维码、在线状态 |
+| `netlify/functions/` | Netlify 上的 API（Blobs 存储）和定时清理 |
+| `server.js` | 本地服务器：静态文件 + 同一套 API（内存存储） |
+| `public/` | PWA 前端（原生 JS），manifest、Service Worker、图标、角色图 |
+| `test/` | 规则引擎单元测试 + HTTP 端到端安全与并发测试 |
 
-**服务端权威。** 客户端只发送意图（`propose`、`vote`、`mission`…），服务器在 `applyAction()` 中校验阶段、身份和权限后修改状态，再通过 SSE 向每位玩家单独推送他**被允许看到**的视图。完整的身份表、未揭晓的投票和任务牌从不离开服务器。
+**服务端权威。** 客户端只发送意图（`propose`、`vote`、`mission`…），服务器在 `applyAction()` 中校验阶段、身份和权限后修改状态，每位玩家查询时只会拿到他**被允许看到**的视图。完整的身份表、未揭晓的投票和任务牌从不离开服务器。
 
 * 每位玩家加入时获得随机 token（存在本机 localStorage），所有请求都凭 token 识别；刷新或断线后用它恢复会话，身份不变。
 * 一台设备只保存一个会话，因此不能同时控制多名玩家。
-* Node 单线程同步执行每个操作，等同于原子事务；重复/并发提交会被拒绝（HTTP 409），不会重复计数。
+* 每次修改都是"比较版本后写入"，冲突时自动重试；重复提交会被拒绝（HTTP 409），不会重复计数。
 * 投票在全员投完前只公开"谁已投票"；任务结果只公开成功/失败牌数量。
 * 身份只在游戏结束后揭晓；重新开始会清空数据并重新随机发牌。
 * 对创建房间、加入、操作分别做了 IP / 玩家级限流；房间代码格式校验。
 * 断网时页面顶部显示红色断线提示，操作不会被假装提交成功。
 
-> 说明：任务书中提到的 Firestore Security Rules 是"服务端强制权限"的一种实现方式。本项目改用自建 Node 服务端实现同样的保证（所有读写都经服务端过滤与校验），无需 Firebase 账号即可运行与测试。
+> 说明：任务书中提到的 Firestore Security Rules 是"服务端强制权限"的一种实现方式。本项目改用服务端函数实现同样的保证（所有读写都经服务端过滤与校验），无需 Firebase 账号即可运行与测试。
 
 ## 游戏规则
 

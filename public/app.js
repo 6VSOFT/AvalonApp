@@ -18,7 +18,9 @@ const ui = {
   showSecret: false,
   busy: false,
   connected: false,
-  es: null,
+  pollTimer: null,
+  pollSeq: 0,
+  lastRaw: null, // last state JSON from the server, to skip identical re-renders
   lastGameNo: null,
   installPrompt: null,
   options: null, // board/preset tables from the server
@@ -83,31 +85,42 @@ async function act(type, extra = {}) {
   }
 }
 
-// ---------- realtime connection ----------
+// ---------- sync with the server (polling; the server is stateless on Netlify) ----------
+const POLL_VISIBLE_MS = 1500;
+const POLL_HIDDEN_MS = 8000;
+function stopPolling() {
+  clearTimeout(ui.pollTimer);
+  ui.pollSeq = (ui.pollSeq || 0) + 1; // invalidates any request still in flight
+}
 function connect() {
+  stopPolling();
+  poll();
+}
+async function poll() {
   const s = loadSession();
-  if (!s) return;
-  if (ui.es) ui.es.close();
-  const es = new EventSource(`/api/rooms/${s.code}/events?token=${encodeURIComponent(s.token)}`);
-  ui.es = es;
-  es.addEventListener('state', ev => {
+  if (!s || ui.screen !== 'game') return;
+  const seq = ui.pollSeq;
+  try {
+    const st = await api('GET', `/api/rooms/${s.code}/state`, null, s.token);
+    if (seq !== ui.pollSeq) return;
     ui.connected = true;
-    updateNet();
-    applyState(JSON.parse(ev.data));
-    render();
-  });
-  es.addEventListener('kicked', () => { es.close(); leaveToHome(); });
-  es.onopen = () => { ui.connected = true; updateNet(); };
-  es.onerror = async () => {
+    const raw = JSON.stringify(st);
+    if (raw !== ui.lastRaw) { // re-render only on change so polling never disturbs the screen
+      ui.lastRaw = raw;
+      applyState(st);
+      render();
+    } else {
+      updateNet();
+    }
+  } catch (e) {
+    if (seq !== ui.pollSeq) return;
+    if (e.status === 401 || e.status === 404) { toast('房间已失效，或你已不在该房间'); leaveToHome(); return; }
     ui.connected = false;
     updateNet();
-    // If the session is no longer valid (room expired), stop retrying.
-    try {
-      await api('GET', `/api/rooms/${s.code}/state`, null, s.token);
-    } catch (e) {
-      if (e.status === 401 || e.status === 404) { es.close(); toast('房间已失效'); leaveToHome(); }
-    }
-  };
+  }
+  if (seq === ui.pollSeq && ui.screen === 'game') {
+    ui.pollTimer = setTimeout(poll, document.visibilityState === 'visible' ? POLL_VISIBLE_MS : POLL_HIDDEN_MS);
+  }
 }
 function updateNet() {
   const offline = !navigator.onLine || (ui.screen === 'game' && !ui.connected);
@@ -117,7 +130,7 @@ function updateNet() {
 window.addEventListener('online', () => { updateNet(); if (ui.screen === 'game') connect(); });
 window.addEventListener('offline', updateNet);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && ui.screen === 'game' && (!ui.es || ui.es.readyState === 2)) connect();
+  if (document.visibilityState === 'visible' && ui.screen === 'game') connect(); // refresh at once when the phone wakes
 });
 
 function applyState(st) {
@@ -139,8 +152,8 @@ function enterGame(session) {
   render();
 }
 function leaveToHome() {
-  if (ui.es) ui.es.close();
-  ui.es = null;
+  stopPolling();
+  ui.lastRaw = null;
   clearSession();
   ui.state = null;
   ui.screen = 'home';
