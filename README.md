@@ -19,7 +19,7 @@ npm test           # 自动化测试
 正式环境部署在 Netlify 项目 **avaloapp**：https://avaloapp.netlify.app
 
 * `public/` 作为静态网站发布；`/api/*` 由 Netlify Function（`netlify/functions/api.mjs`）处理。
-* 房间状态存放在 Netlify Blobs。每次写入都带上读取时的版本号（etag），只有在没人同时修改时才会成功，否则重新读取并重新校验，所以并发投票不会丢失或重复计数。
+* 房间状态存放在 Netlify Database（Postgres），每个房间一行。每次写入都是 `UPDATE … WHERE version = 读取时的版本`，只有在没人同时修改时才会成功，否则重新读取并重新校验，所以并发投票不会丢失或重复计数。表结构在 `netlify/database/migrations/`，部署时自动执行。
 * 手机每 1.5 秒向服务器查询一次最新状态（页面在后台时 8 秒一次），所以界面更新最多有约 1.5 秒延迟。
 * `cleanup` 定时函数每小时删除闲置超过 12 小时的房间。
 * 构建时会先运行 `npm test`，测试不通过就不会发布。
@@ -32,7 +32,7 @@ npm test           # 自动化测试
 |---|---|
 | `src/game.js` | 规则引擎：角色分配、组队、投票、任务、刺杀、胜负判定，以及按玩家过滤的视图 `viewFor()` |
 | `src/api.js` | 所有 `/api` 接口：校验、并发安全写入（`withRoom()`）、限流、二维码、在线状态 |
-| `netlify/functions/` | Netlify 上的 API（Blobs 存储）和定时清理 |
+| `netlify/functions/` | Netlify 上的 API（数据库存储）和定时清理 |
 | `server.js` | 本地服务器：静态文件 + 同一套 API（内存存储） |
 | `public/` | PWA 前端（原生 JS），manifest、Service Worker、图标、角色图 |
 | `test/` | 规则引擎单元测试 + HTTP 端到端安全与并发测试 |
