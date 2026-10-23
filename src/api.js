@@ -27,6 +27,9 @@ const OPTIONS = {
 function migrate(r) {
   if (!r.config) r.config = { ...game.DEFAULT_CONFIG };
   if (!game.presetFor(r.config)) r.config.preset = game.PRESETS[r.config.size][0].id;
+  // Rooms from before seats existed: seat players in join order.
+  r.players.forEach((p, i) => { if (!Number.isInteger(p.seat)) p.seat = i; });
+  if (!r.swaps) r.swaps = {};
   const g = r.game;
   if (g && !g.size) {
     Object.assign(g, { size: 6, rejectRule: 'evil_wins', preset: 'basic', forced: false });

@@ -354,3 +354,71 @@ test('reveal phase: every player must confirm once', () => {
   room.players.slice(1).forEach(p => G.applyAction(room, p, { type: 'ack' }));
   assert.strictEqual(room.game.phase, 'team');
 });
+
+test('seats: joiners take the lowest free seat; leaving frees it', () => {
+  const { room } = lobby(6);
+  assert.deepStrictEqual(room.players.map(p => p.seat), [0, 1, 2, 3, 4, 5]);
+  const p3 = room.players[2];
+  G.applyAction(room, p3, { type: 'leave' });
+  const late = G.addPlayer(room, 'Late');
+  assert.strictEqual(late.seat, 2);
+});
+
+test('seats: move to an empty seat at once; validated; lobby only', () => {
+  const { room: r } = G.createRoom('ABCDE', 'H', { size: 6 });
+  const a = G.addPlayer(r, 'A');
+  G.applyAction(r, a, { type: 'seat', seat: 4 });
+  assert.strictEqual(a.seat, 4);
+  for (const bad of [6, -1, 1.5, '3', null]) throwsCode(() => G.applyAction(r, a, { type: 'seat', seat: bad }), 'bad_seat');
+  throwsCode(() => G.applyAction(r, a, { type: 'seat', seat: 4 }), 'bad_seat');
+  assert.deepStrictEqual(G.viewFor(r, a).players.map(p => [p.name, p.seat]), [['H', 0], ['A', 4]], 'lobby list is in seat order');
+  const room = setup(6);
+  throwsCode(() => G.applyAction(room, room.players[0], { type: 'seat', seat: 0 }), 'bad_phase');
+});
+
+test('seats: swapping needs the other player to agree', () => {
+  const { room } = lobby(6);
+  const [a, b, c] = room.players;
+  G.applyAction(room, a, { type: 'seat', seat: b.seat });
+  assert.deepStrictEqual([a.seat, b.seat], [0, 1], 'a request does not move anyone');
+  assert.deepStrictEqual(G.viewFor(room, b).swaps, [{ from: a.id, to: b.id }]);
+  throwsCode(() => G.applyAction(room, c, { type: 'swap_answer', from: a.id, accept: true }), 'not_found');
+  G.applyAction(room, b, { type: 'swap_answer', from: a.id, accept: false });
+  assert.deepStrictEqual([a.seat, b.seat], [0, 1]);
+  assert.deepStrictEqual(G.viewFor(room, a).swaps, []);
+  G.applyAction(room, a, { type: 'seat', seat: b.seat });
+  G.applyAction(room, b, { type: 'swap_answer', from: a.id, accept: true });
+  assert.deepStrictEqual([a.seat, b.seat], [1, 0]);
+  throwsCode(() => G.applyAction(room, b, { type: 'swap_answer', from: a.id, accept: true }), 'not_found', 'a used request cannot be replayed');
+  G.applyAction(room, c, { type: 'seat', seat: a.seat });
+  G.applyAction(room, c, { type: 'swap_cancel' });
+  throwsCode(() => G.applyAction(room, a, { type: 'swap_answer', from: c.id, accept: true }), 'not_found');
+  G.applyAction(room, c, { type: 'seat', seat: a.seat });
+  G.applyAction(room, c, { type: 'leave' });
+  assert.deepStrictEqual(G.viewFor(room, a).swaps, [], 'leaving clears requests');
+});
+
+test('seats: the game keeps lobby seating, and leaders rotate in seat order', () => {
+  const { room, host } = lobby(5);
+  const [a, b] = room.players.slice(1, 3);
+  G.applyAction(room, a, { type: 'seat', seat: b.seat });
+  G.applyAction(room, b, { type: 'swap_answer', from: a.id, accept: true });
+  const expected = room.players.slice().sort((x, y) => x.seat - y.seat).map(p => p.id);
+  room.players.forEach(p => G.applyAction(room, p, { type: 'ready', value: true }));
+  G.applyAction(room, host, { type: 'start' });
+  assert.deepStrictEqual(room.game.seats, expected);
+  assert.deepStrictEqual(G.viewFor(room, host).players.map(p => p.id), expected);
+  room.players.forEach(p => G.applyAction(room, p, { type: 'ack' }));
+  const first = room.game.leaderIdx;
+  propose(room, room.game.seats.slice(0, 2));
+  voteAll(room, 0);
+  assert.strictEqual(room.game.seats[room.game.leaderIdx], expected[(first + 1) % 5]);
+});
+
+test('seats: shrinking the table moves players beyond it to free seats', () => {
+  const { room: r, player: host } = G.createRoom('ABCDE', 'H', { size: 10 });
+  const a = G.addPlayer(r, 'A');
+  G.applyAction(r, a, { type: 'seat', seat: 9 });
+  G.applyAction(r, host, { type: 'config', config: { size: 5 } });
+  assert.ok(a.seat < 5 && a.seat !== host.seat);
+});

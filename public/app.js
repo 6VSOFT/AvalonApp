@@ -300,11 +300,33 @@ function viewLobby(st) {
   const full = st.players.length === size;
   const allReady = full && st.players.every(p => p.ready);
   const link = `${location.origin}/r/${st.code}`;
-  const rows = st.players.map(p => `<li><span class="dot ${p.online ? 'on' : ''}"></span>
-      <span class="name">${esc(p.name)}${p.id === st.me.id ? '（你）' : ''}</span>
+  // The list is the seating: one row per seat. Tap an empty seat to sit there, or another
+  // player's seat to ask them to swap.
+  const myRequest = st.swaps.find(s => s.from === me.id);
+  const incoming = st.swaps.filter(s => s.to === me.id);
+  const rows = Array.from({ length: size }, (_, seat) => {
+    const p = st.players.find(x => x.seat === seat);
+    const num = `<span class="seat">${seat + 1}</span>`;
+    if (!p) {
+      return `<li class="selectable" data-a="seat" data-v="${seat}">${num}<span class="name muted">空座位 · 点击坐这里</span></li>`;
+    }
+    const mine = p.id === me.id;
+    const asked = myRequest && myRequest.to === p.id;
+    return `<li class="${mine ? 'selected' : 'selectable'}" ${mine ? '' : `data-a="seat" data-v="${seat}"`}>${num}
+      <span class="dot ${p.online ? 'on' : ''}"></span>
+      <span class="name">${esc(p.name)}${mine ? '（你）' : ''}</span>
+      ${asked ? '<span class="badge">等待回应</span>' : ''}
       ${p.id === st.hostId ? '<span class="badge gold">房主</span>' : ''}
-      <span class="badge ${p.ready ? 'ok' : ''}">${p.ready ? '已准备' : '未准备'}</span></li>`).join('');
-  const empty = Array.from({ length: size - st.players.length }, () => '<li><span class="name muted">等待玩家加入…</span></li>').join('');
+      <span class="badge ${p.ready ? 'ok' : ''}">${p.ready ? '已准备' : '未准备'}</span></li>`;
+  }).join('');
+  const requests = incoming.map(s => {
+    const from = st.players.find(p => p.id === s.from);
+    return from ? `<div class="notice">${esc(from.name)}（${from.seat + 1} 号）想和你（${me.seat + 1} 号）换座位
+      <div class="grid2" style="margin-top:8px"><button class="small ok" data-a="swap-yes" data-v="${esc(from.id)}" ${ui.busy ? 'disabled' : ''}>同意</button>
+      <button class="small ghost" data-a="swap-no" data-v="${esc(from.id)}" ${ui.busy ? 'disabled' : ''}>拒绝</button></div></div>` : '';
+  }).join('');
+  const pending = myRequest ? `<div class="notice">已请求和 ${esc((st.players.find(p => p.id === myRequest.to) || {}).name || '?')} 换座位，等待对方同意
+    <button class="small ghost" style="margin-top:8px" data-a="swap-cancel">取消请求</button></div>` : '';
   return `
     <div class="card center">
       <div class="muted">房间代码</div>
@@ -314,8 +336,10 @@ function viewLobby(st) {
       <button class="small ghost" data-a="share">复制/分享链接</button>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:10px"><h3 class="grow" style="margin:0">玩家</h3><b>${st.players.length}/${size}</b></div>
-      <ul class="players">${rows}${empty}</ul>
+      <div class="row" style="margin-bottom:6px"><h3 class="grow" style="margin:0">座位</h3><b>${st.players.length}/${size}</b></div>
+      <p class="muted" style="margin:0 0 10px">按座位顺序轮流当队长。点空座位直接换过去，点别人的座位可以请求互换。</p>
+      ${requests}${pending}
+      <ul class="players">${rows}</ul>
     </div>
     <div class="card">
       <h3>房间配置</h3>
@@ -646,6 +670,15 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'ready': act('ready', { value: !st.players.find(p => p.id === st.me.id).ready }); break;
+    case 'seat': {
+      const seat = Number(el.dataset.v);
+      const other = st.players.find(p => p.seat === seat);
+      if (!other || confirm(`请求和 ${other.name} 互换座位？对方同意后生效。`)) act('seat', { seat });
+      break;
+    }
+    case 'swap-yes': act('swap_answer', { from: el.dataset.v, accept: true }); break;
+    case 'swap-no': act('swap_answer', { from: el.dataset.v, accept: false }); break;
+    case 'swap-cancel': act('swap_cancel'); break;
     case 'start': act('start'); break;
     case 'leave': if (confirm('确定离开房间？')) act('leave'); break;
     case 'ack': act('ack'); break;

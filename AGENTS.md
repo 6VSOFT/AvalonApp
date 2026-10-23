@@ -51,6 +51,7 @@ Secret information is the core of the game. Breaking these rules ruins real game
 ## Game rules implemented
 
 - Player counts 5–10. Mission sizes per round: 5p `2 3 2 3 3`, 6p `2 3 4 3 4`, 7p `2 3 3 4 4`, 8–10p `3 4 4 5 5`. With 7+ players round 4 needs 2 fail cards.
+- Seats: the lobby list is the seating (`player.seat`). Joiners take the lowest free seat; a player can move to an empty seat at once, or ask another player to swap (`seat` → `swap_answer` by the other player). The game keeps this order (`game.seats`) and the leader rotates through it; only the first leader is random.
 - Team approval needs a strict majority (`floor(n/2)+1`).
 - After 5 consecutive rejections: `evil_wins`, or `forced` (next leader's team skips the vote and goes straight to the mission).
 - Night info: Merlin sees evil except Mordred; Percival sees Merlin + Morgana without knowing which; evil see each other except Oberon (who sees no one); servants see no one.

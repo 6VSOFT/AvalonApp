@@ -136,7 +136,8 @@ function createRoom(code, hostName, config) {
     status: 'lobby', // lobby | playing | ended
     hostId: null,
     config: cleanConfig(config),
-    players: [],
+    players: [], // each has a seat 0..size-1; the lobby list is the seating order
+    swaps: {}, // pending seat-swap requests: requester id -> target id
     game: null,
   };
   const host = addPlayer(room, hostName);
@@ -149,11 +150,28 @@ function addPlayer(room, rawName) {
   if (room.status !== 'lobby') fail('started', '游戏已开始，无法加入');
   if (room.players.length >= room.config.size) fail('full', `房间已满（${room.config.size}/${room.config.size}）`);
   if (room.players.some(p => p.name.toLowerCase() === name.toLowerCase())) fail('name_taken', '昵称已被使用，请换一个');
-  const player = { id: 'p' + newId(6), token: newId(24), name, ready: false };
+  const player = { id: 'p' + newId(6), token: newId(24), name, ready: false, seat: freeSeat(room) };
   room.players.push(player);
   touch(room);
   return player;
 }
+
+function freeSeat(room) {
+  const taken = new Set(room.players.map(p => p.seat));
+  for (let s = 0; ; s++) if (!taken.has(s)) return s;
+}
+// After the table shrinks, anyone sitting beyond it moves to the lowest free seat.
+function compactSeats(room) {
+  for (const p of room.players.filter(x => x.seat >= room.config.size).sort((a, b) => a.seat - b.seat)) {
+    p.seat = -1;
+    p.seat = freeSeat({ players: room.players.filter(x => x.seat >= 0) });
+  }
+}
+function clearSwaps(room, playerId) {
+  room.swaps = room.swaps || {};
+  for (const [from, to] of Object.entries(room.swaps)) if (from === playerId || to === playerId) delete room.swaps[from];
+}
+const bySeat = players => players.slice().sort((a, b) => a.seat - b.seat);
 
 function touch(room) { room.version++; room.updatedAt = Date.now(); }
 
@@ -165,7 +183,7 @@ function findByToken(room, token) {
 function startGame(room) {
   const { size, rejectRule } = room.config;
   const roles = shuffle(presetFor(room.config).roles);
-  const order = shuffle(room.players.map(p => p.id)); // random seating for leader rotation
+  const order = bySeat(room.players).map(p => p.id); // lobby seating = table order for leader rotation
   const missions = BOARDS[size].missions;
   room.gameNo++;
   room.status = 'playing';
@@ -225,12 +243,49 @@ function applyAction(room, player, action) {
       const next = cleanConfig(action.config, room.config);
       need(next.size >= room.players.length, 'bad_config', `已有 ${room.players.length} 名玩家，人数不能少于此数`);
       room.config = next;
+      compactSeats(room);
       room.players.forEach(p => { p.ready = false; }); // everyone re-confirms the new setup
+      break;
+    }
+    case 'seat': {
+      // Sit in an empty seat at once, or ask the player in that seat to swap.
+      need(room.status === 'lobby', 'bad_phase', '游戏开始后不能换座位');
+      const seat = action.seat;
+      need(Number.isInteger(seat) && seat >= 0 && seat < room.config.size, 'bad_seat', '无效的座位');
+      need(seat !== player.seat, 'bad_seat', '你已经坐在这里');
+      const other = room.players.find(p => p.seat === seat);
+      if (!other) {
+        clearSwaps(room, player.id);
+        player.seat = seat;
+      } else {
+        room.swaps = room.swaps || {};
+        room.swaps[player.id] = other.id;
+      }
+      break;
+    }
+    case 'swap_cancel': {
+      need(room.status === 'lobby', 'bad_phase', '游戏开始后不能换座位');
+      need(room.swaps && room.swaps[player.id], 'not_found', '没有待处理的换座请求');
+      delete room.swaps[player.id];
+      break;
+    }
+    case 'swap_answer': {
+      need(room.status === 'lobby', 'bad_phase', '游戏开始后不能换座位');
+      const from = room.players.find(p => p.id === action.from);
+      need(from && room.swaps && room.swaps[from.id] === player.id, 'not_found', '这个换座请求已失效');
+      if (action.accept === true) {
+        [from.seat, player.seat] = [player.seat, from.seat];
+        clearSwaps(room, from.id);
+        clearSwaps(room, player.id);
+      } else {
+        delete room.swaps[from.id];
+      }
       break;
     }
     case 'leave': {
       need(room.status === 'lobby', 'bad_phase', '游戏进行中不能离开房间');
       room.players = room.players.filter(p => p.id !== player.id);
+      clearSwaps(room, player.id);
       if (room.hostId === player.id) room.hostId = room.players[0] ? room.players[0].id : null;
       break;
     }
@@ -401,7 +456,7 @@ function configView(config) {
 function viewFor(room, player, online = new Set()) {
   const g = room.game;
   const name = id => (room.players.find(p => p.id === id) || {}).name || '?';
-  const order = g ? g.seats : room.players.map(p => p.id);
+  const order = g ? g.seats : bySeat(room.players).map(p => p.id);
   const view = {
     code: room.code,
     version: room.version,
@@ -409,10 +464,11 @@ function viewFor(room, player, online = new Set()) {
     status: room.status,
     hostId: room.hostId,
     config: configView(room.config),
+    swaps: room.status === 'lobby' ? Object.entries(room.swaps || {}).map(([from, to]) => ({ from, to })) : [],
     me: { id: player.id, name: player.name, isHost: room.hostId === player.id },
     players: order.map(id => {
       const p = room.players.find(x => x.id === id);
-      return { id, name: p.name, ready: p.ready, online: online.has(id) };
+      return { id, name: p.name, ready: p.ready, online: online.has(id), seat: p.seat };
     }),
   };
   if (!g) return view;
