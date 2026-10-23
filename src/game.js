@@ -22,46 +22,45 @@ const BOARDS = {
 };
 const failsNeeded = (size, round) => (size >= 7 && round === 3 ? 2 : 1);
 
+// `short` is the label used on the role preview chips.
 const ROLES = {
-  merlin: { name: '梅林 Merlin', team: 'good', desc: '你知道坏人是谁（莫德雷德除外），但不能暴露自己。好人三次任务成功后，刺客会尝试刺杀你。' },
-  percival: { name: '派西维尔 Percival', team: 'good', desc: '你会看到梅林和莫甘娜，但无法分辨谁是真梅林。你的任务是保护梅林。' },
-  servant: { name: '亚瑟的忠臣 Loyal Servant', team: 'good', desc: '你没有特殊能力。通过讨论与投票找出坏人，只能提交成功牌。' },
-  assassin: { name: '刺客 Assassin', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌。若好人完成三次任务，由你刺杀梅林。' },
-  morgana: { name: '莫甘娜 Morgana', team: 'evil', desc: '你在派西维尔眼中看起来像梅林。认识你的同伴，可以提交成功或失败牌。' },
-  mordred: { name: '莫德雷德 Mordred', team: 'evil', desc: '梅林看不到你。你认识你的同伴，可以提交成功或失败牌。' },
-  oberon: { name: '奥伯伦 Oberon', team: 'evil', desc: '你不认识其他坏人，他们也不认识你，但梅林能看到你。可以提交成功或失败牌。' },
-  minion: { name: '莫德雷德爪牙 Minion', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌，帮助任务失败。' },
+  merlin: { name: '梅林 Merlin', short: '梅林', team: 'good', desc: '你知道坏人是谁（莫德雷德除外），但不能暴露自己。好人三次任务成功后，刺客会尝试刺杀你。' },
+  percival: { name: '派西维尔 Percival', short: '派西维尔', team: 'good', desc: '你会看到梅林和莫甘娜，但无法分辨谁是真梅林。你的任务是保护梅林。' },
+  servant: { name: '亚瑟的忠臣 Loyal Servant', short: '忠臣', team: 'good', desc: '你没有特殊能力。通过讨论与投票找出坏人，只能提交成功牌。' },
+  assassin: { name: '刺客 Assassin', short: '刺客', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌。若好人完成三次任务，由你刺杀梅林。' },
+  morgana: { name: '莫甘娜 Morgana', short: '莫甘娜', team: 'evil', desc: '你在派西维尔眼中看起来像梅林。认识你的同伴，可以提交成功或失败牌。' },
+  mordred: { name: '莫德雷德 Mordred', short: '莫德雷德', team: 'evil', desc: '梅林看不到你。你认识你的同伴，可以提交成功或失败牌。' },
+  oberon: { name: '奥伯伦 Oberon', short: '奥伯伦', team: 'evil', desc: '你不认识其他坏人，他们也不认识你，但梅林能看到你。可以提交成功或失败牌。' },
+  minion: { name: '莫德雷德爪牙 Minion', short: '爪牙', team: 'evil', desc: '你认识你的同伴。可以提交成功或失败牌，帮助任务失败。' },
 };
 
 const rep = (role, n) => Array(n).fill(role);
 // Role presets per player count; the first one is the default.
+// Role order is the order the preview chips are shown in.
 const PRESETS = {
   5: [
     { id: 'standard', name: '标准局', roles: ['merlin', 'percival', 'servant', 'morgana', 'assassin'] },
-    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 2), 'assassin', 'minion'] },
+    { id: 'no_percival', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 2), 'morgana', 'assassin'] },
   ],
   6: [
     { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 2), 'morgana', 'assassin'] },
-    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 3), 'assassin', 'minion'] },
+    { id: 'mordred', name: '莫德雷德局', roles: ['merlin', 'percival', ...rep('servant', 2), 'mordred', 'assassin'] },
   ],
   7: [
-    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 2), 'morgana', 'assassin', 'minion'] },
-    { id: 'oberon', name: '奥伯伦局', roles: ['merlin', 'percival', ...rep('servant', 2), 'morgana', 'assassin', 'oberon'] },
-    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 3), 'assassin', ...rep('minion', 2)] },
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 2), 'morgana', 'oberon', 'assassin'] },
+    { id: 'mordred', name: '莫德雷德局', roles: ['merlin', 'percival', ...rep('servant', 2), 'mordred', 'morgana', 'assassin'] },
   ],
   8: [
     { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 3), 'morgana', 'assassin', 'minion'] },
-    { id: 'mordred', name: '莫德雷德局', roles: ['merlin', 'percival', ...rep('servant', 3), 'morgana', 'assassin', 'mordred'] },
-    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 4), 'assassin', ...rep('minion', 2)] },
+    { id: 'oberon', name: '奥伯伦局', roles: ['merlin', 'percival', ...rep('servant', 3), 'morgana', 'assassin', 'oberon'] },
   ],
   9: [
-    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'mordred'] },
-    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 5), 'assassin', ...rep('minion', 2)] },
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 4), 'mordred', 'morgana', 'assassin'] },
+    { id: 'oberon', name: '奥伯伦局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'oberon'] },
   ],
   10: [
-    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'mordred', 'oberon'] },
-    { id: 'no_oberon', name: '无奥伯伦局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'mordred', 'minion'] },
-    { id: 'basic', name: '无派西维尔局', roles: ['merlin', ...rep('servant', 5), 'assassin', ...rep('minion', 3)] },
+    { id: 'standard', name: '标准局', roles: ['merlin', 'percival', ...rep('servant', 4), 'mordred', 'morgana', 'oberon', 'assassin'] },
+    { id: 'minion', name: '爪牙局', roles: ['merlin', 'percival', ...rep('servant', 4), 'morgana', 'assassin', 'oberon', 'minion'] },
   ],
 };
 const REJECT_RULES = {

@@ -25,9 +25,10 @@ function load() {
     for (const r of list) if (Date.now() - r.updatedAt < ROOM_TTL_MS) rooms.set(r.code, migrate(r));
   } catch { /* no saved state */ }
 }
-// Rooms saved by the fixed 6-player version have no config.
+// Rooms saved by older versions may have no config or a preset that no longer exists.
 function migrate(r) {
-  if (!r.config) r.config = { size: 6, preset: 'basic', rejectRule: 'evil_wins' };
+  if (!r.config) r.config = { ...game.DEFAULT_CONFIG };
+  if (!game.presetFor(r.config)) r.config.preset = game.PRESETS[r.config.size][0].id;
   const g = r.game;
   if (g && !g.size) {
     Object.assign(g, { size: 6, rejectRule: 'evil_wins', preset: 'basic', forced: false });
@@ -41,7 +42,7 @@ const OPTIONS = {
   sizes: Object.keys(game.BOARDS).map(Number),
   boards: game.BOARDS,
   presets: game.PRESETS,
-  roles: Object.fromEntries(Object.entries(game.ROLES).map(([k, v]) => [k, { name: v.name, team: v.team }])),
+  roles: Object.fromEntries(Object.entries(game.ROLES).map(([k, v]) => [k, { name: v.name, short: v.short, team: v.team }])),
   rejectRules: game.REJECT_RULES,
   defaults: game.DEFAULT_CONFIG,
 };

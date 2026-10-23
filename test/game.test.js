@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const G = require('../src/game');
 
-function lobby(size = 6, preset = 'basic', rejectRule = 'evil_wins') {
+function lobby(size = 6, preset = 'standard', rejectRule = 'evil_wins') {
   const { room, player: host } = G.createRoom('ABCDE', 'P1', { size, preset, rejectRule });
   for (let i = 2; i <= size; i++) G.addPlayer(room, 'P' + i);
   return { room, host };
@@ -51,6 +51,28 @@ test('every preset matches its board: right size and good/evil split', () => {
   }
 });
 
+test('mission sizes and two-fail round match the standard 5–10 player table', () => {
+  const table = { 5: [2, 3, 2, 3, 3], 6: [2, 3, 4, 3, 4], 7: [2, 3, 3, 4, 4], 8: [3, 4, 4, 5, 5], 9: [3, 4, 4, 5, 5], 10: [3, 4, 4, 5, 5] };
+  for (const [size, sizes] of Object.entries(table)) {
+    assert.deepStrictEqual(G.BOARDS[size].missions, sizes, `${size} players`);
+    const room = setup(Number(size));
+    assert.deepStrictEqual(room.game.history.map(h => h.failsNeeded), size >= 7 ? [1, 1, 1, 2, 1] : [1, 1, 1, 1, 1], `${size} players`);
+  }
+});
+
+test('presets match the agreed line-ups', () => {
+  const short = p => p.roles.map(r => G.ROLES[r].short).join(',');
+  const got = Object.fromEntries(Object.entries(G.PRESETS).map(([n, ps]) => [n, ps.map(p => `${p.name}:${short(p)}`)]));
+  assert.deepStrictEqual(got, {
+    5: ['标准局:梅林,派西维尔,忠臣,莫甘娜,刺客', '无派西维尔局:梅林,忠臣,忠臣,莫甘娜,刺客'],
+    6: ['标准局:梅林,派西维尔,忠臣,忠臣,莫甘娜,刺客', '莫德雷德局:梅林,派西维尔,忠臣,忠臣,莫德雷德,刺客'],
+    7: ['标准局:梅林,派西维尔,忠臣,忠臣,莫甘娜,奥伯伦,刺客', '莫德雷德局:梅林,派西维尔,忠臣,忠臣,莫德雷德,莫甘娜,刺客'],
+    8: ['标准局:梅林,派西维尔,忠臣,忠臣,忠臣,莫甘娜,刺客,爪牙', '奥伯伦局:梅林,派西维尔,忠臣,忠臣,忠臣,莫甘娜,刺客,奥伯伦'],
+    9: ['标准局:梅林,派西维尔,忠臣,忠臣,忠臣,忠臣,莫德雷德,莫甘娜,刺客', '奥伯伦局:梅林,派西维尔,忠臣,忠臣,忠臣,忠臣,莫甘娜,刺客,奥伯伦'],
+    10: ['标准局:梅林,派西维尔,忠臣,忠臣,忠臣,忠臣,莫德雷德,莫甘娜,奥伯伦,刺客', '爪牙局:梅林,派西维尔,忠臣,忠臣,忠臣,忠臣,莫甘娜,刺客,奥伯伦,爪牙'],
+  });
+});
+
 test('A: room capacity follows the configured size; late join and duplicate names rejected', () => {
   const { room: r1 } = G.createRoom('ABCDE', 'Alice', { size: 5 });
   throwsCode(() => G.addPlayer(r1, 'alice'), 'name_taken');
@@ -91,7 +113,7 @@ test('A: the preset deck is dealt exactly, and randomly', () => {
 });
 
 test('A: night vision per role (Merlin, Percival, Mordred, Oberon, evil team)', () => {
-  for (const [size, preset] of [[5, 'standard'], [6, 'basic'], [7, 'oberon'], [8, 'mordred'], [10, 'standard']]) {
+  for (const [size, preset] of [[5, 'standard'], [5, 'no_percival'], [6, 'mordred'], [7, 'standard'], [8, 'oberon'], [9, 'standard'], [10, 'minion']]) {
     const room = setup(size, preset);
     const ids = r => byRole(room, r);
     const evil = byTeam(room, 'evil');
@@ -168,7 +190,7 @@ test('B: votes stay secret until everyone has voted; no double voting', () => {
 });
 
 test('B: five consecutive rejections give evil the win (evil_wins rule)', () => {
-  const room = setup(6, 'basic', 'evil_wins');
+  const room = setup(6, 'standard', 'evil_wins');
   for (let i = 0; i < 5; i++) { propose(room, room.game.seats.slice(0, 2)); voteAll(room, 0); }
   assert.strictEqual(room.status, 'ended');
   assert.strictEqual(room.game.winner, 'evil');
@@ -197,7 +219,7 @@ test('B: forced rule: after five rejections the next leader’s team skips the v
 test('C: mission card rules', () => {
   const room = setup(6);
   const merlin = byRole(room, 'merlin')[0];
-  const minion = byRole(room, 'minion')[0];
+  const minion = byTeam(room, 'evil').find(id => roleOf(room, id) !== 'assassin');
   const outsider = room.game.seats.find(id => id !== merlin && id !== minion);
   propose(room, [merlin, minion]);
   voteAll(room, 6);
@@ -244,7 +266,7 @@ test('D: three successes lead to assassination; hitting Merlin wins for evil', (
   runMission(room); runMission(room); runMission(room);
   assert.strictEqual(room.game.phase, 'assassin');
   const assassin = P(room, byRole(room, 'assassin')[0]);
-  const minion = P(room, byRole(room, 'minion')[0]);
+  const minion = P(room, byTeam(room, 'evil').find(id => roleOf(room, id) !== 'assassin'));
   const merlin = byRole(room, 'merlin')[0];
   throwsCode(() => G.applyAction(room, minion, { type: 'assassinate', target: merlin }), 'forbidden');
   throwsCode(() => G.applyAction(room, assassin, { type: 'assassinate', target: assassin.id }), 'bad_target');
@@ -274,10 +296,10 @@ test('config: host-only, lobby-only, validated, and resets ready', () => {
   throwsCode(() => G.applyAction(room, host, { type: 'config', config: { preset: 'nope' } }), 'bad_config');
   throwsCode(() => G.applyAction(room, host, { type: 'config', config: { rejectRule: 'x' } }), 'bad_config');
   G.applyAction(room, host, { type: 'config', config: { size: 7 } });
-  assert.deepStrictEqual(room.config, { size: 7, preset: 'basic', rejectRule: 'evil_wins' });
+  assert.deepStrictEqual(room.config, { size: 7, preset: 'standard', rejectRule: 'evil_wins' });
   assert.ok(room.players.every(p => !p.ready));
-  G.applyAction(room, host, { type: 'config', config: { preset: 'oberon', rejectRule: 'forced' } });
-  G.applyAction(room, host, { type: 'config', config: { size: 8 } }); // 8 has no 'oberon' preset
+  G.applyAction(room, host, { type: 'config', config: { preset: 'mordred', rejectRule: 'forced' } });
+  G.applyAction(room, host, { type: 'config', config: { size: 8 } }); // 8 has no 'mordred' preset
   assert.strictEqual(room.config.preset, 'standard');
   assert.strictEqual(room.config.rejectRule, 'forced');
   G.addPlayer(room, 'Seventh');

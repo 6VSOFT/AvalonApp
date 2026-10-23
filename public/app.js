@@ -204,7 +204,7 @@ function configEditor(cfg, editable, minSize) {
   const chips = team => {
     const counts = {};
     preset.roles.filter(r => o.roles[r].team === team).forEach(r => { counts[r] = (counts[r] || 0) + 1; });
-    return Object.entries(counts).map(([r, n]) => `<span class="chip ${team}">${esc(o.roles[r].name.split(' ')[0])}${n > 1 ? ' ×' + n : ''}</span>`).join('');
+    return Object.entries(counts).map(([r, n]) => `<span class="chip ${team}">${esc(o.roles[r].short)}${n > 1 ? ' x' + n : ''}</span>`).join('');
   };
   const sizes = o.sizes.map(s => `<button type="button" class="size ${s === cfg.size ? 'on' : ''}" data-a="cfg-size" data-v="${s}"
     ${editable && s >= minSize ? '' : 'disabled'}>${s}</button>`).join('');
