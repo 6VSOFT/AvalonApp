@@ -462,3 +462,11 @@ test('dissolve: host only; afterwards every action is refused', () => {
     throwsCode(() => G.applyAction(room, host, action), 'closed');
   }
 });
+
+test('new rooms default to the forced round after five rejections', () => {
+  assert.strictEqual(G.DEFAULT_CONFIG.rejectRule, 'forced');
+  const { room } = G.createRoom('ABCDE', 'H');
+  assert.strictEqual(room.config.rejectRule, 'forced');
+  const { room: r5 } = G.createRoom('ABCDE', 'H', { size: 5 });
+  assert.strictEqual(r5.config.rejectRule, 'forced', 'a config without a rule uses the default');
+});

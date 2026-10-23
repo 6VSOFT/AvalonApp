@@ -67,7 +67,7 @@ const REJECT_RULES = {
   evil_wins: '坏人直接获胜',
   forced: '进入强制轮',
 };
-const DEFAULT_CONFIG = { size: 6, preset: 'standard', rejectRule: 'evil_wins' };
+const DEFAULT_CONFIG = { size: 6, preset: 'standard', rejectRule: 'forced' };
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 class GameError extends Error {
