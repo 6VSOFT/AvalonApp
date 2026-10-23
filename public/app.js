@@ -298,6 +298,8 @@ function viewGame() {
 }
 
 const nameOf = (st, id) => (st.players.find(p => p.id === id) || {}).name || '?';
+// Seat numbers are public (the lobby seating), so the client shows them next to names.
+const seatNo = (st, id) => st.players.findIndex(p => p.id === id) + 1;
 
 function viewLobby(st) {
   const me = st.players.find(p => p.id === st.me.id);
@@ -415,7 +417,7 @@ function secretCard(st) {
     <img class="role-art" src="/roles/${esc(s.role)}.svg" alt="${esc(s.roleName)}" width="140" height="140">
     <div class="role">${esc(s.roleName)}</div>
     <p>${esc(s.desc)}</p>
-    ${s.knowsLabel ? `<p class="muted" style="margin-top:10px">${esc(s.knowsLabel)}：</p><ul class="${s.role === 'percival' ? 'unknown' : ''}">${s.knows.map(k => `<li>${esc(k.name)}</li>`).join('')}</ul>` : '<p class="muted">你不知道任何人的身份。</p>'}
+    ${s.knowsLabel ? `<p class="muted" style="margin-top:10px">${esc(s.knowsLabel)}：</p><ul class="${s.role === 'percival' ? 'unknown' : ''}">${s.knows.map(k => `<li><span class="seat-no">${seatNo(st, k.id)}号</span>${esc(k.name)}</li>`).join('')}</ul>` : '<p class="muted">你不知道任何人的身份。</p>'}
     ${s.note ? `<p class="muted" style="margin-top:8px">${esc(s.note)}</p>` : ''}
     <p class="muted" style="margin-top:12px">点击隐藏</p>
   </div>`;

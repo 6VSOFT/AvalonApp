@@ -221,3 +221,4 @@ button.danger-outline { background: var(--card); color: var(--bad); border-color
 button.danger-outline:active:not(:disabled) { background: #fff3f4; }
 .confirm-danger { border-top: 4px solid var(--bad); }
 .confirm-danger h3 { color: var(--bad); }
+.secret li .seat-no { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; background: rgba(255, 255, 255, .25); font-family: var(--mono); font-size: 13px; }
