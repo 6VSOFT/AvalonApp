@@ -134,6 +134,25 @@ test('A: night vision per role (Merlin, Percival, Mordred, Oberon, evil team)', 
   }
 });
 
+test('5-player standard: Percival sees exactly Merlin and Morgana; no one is listed as their own partner', () => {
+  for (let i = 0; i < 200; i++) {
+    const room = setup(5, 'standard');
+    const merlin = byRole(room, 'merlin')[0];
+    const morgana = byRole(room, 'morgana')[0];
+    const percival = byRole(room, 'percival')[0];
+    const pv = G.viewFor(room, P(room, percival)).secret;
+    assert.deepStrictEqual(pv.knows.map(k => k.id).sort(), [merlin, morgana].sort());
+    assert.deepStrictEqual(pv.knows.map(k => k.name).sort(), [P(room, merlin).name, P(room, morgana).name].sort());
+    for (const id of room.game.seats) {
+      const v = G.viewFor(room, P(room, id)).secret;
+      assert.ok(!v.knows.some(k => k.id === id), 'a player never appears in their own list');
+    }
+    // Morgana's partner is the assassin, and the assassin's partner is Morgana.
+    assert.deepStrictEqual(G.viewFor(room, P(room, morgana)).secret.knows.map(k => k.id), byRole(room, 'assassin'));
+    assert.deepStrictEqual(G.viewFor(room, P(room, byRole(room, 'assassin')[0])).secret.knows.map(k => k.id), [morgana]);
+  }
+});
+
 test('B: team size enforced per round for every player count; only leader proposes', () => {
   for (const size of [5, 6, 7, 8, 9, 10]) {
     const room = setup(size);

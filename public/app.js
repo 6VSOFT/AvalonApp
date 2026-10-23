@@ -353,6 +353,7 @@ function secretCard(st) {
   }
   return `<div class="card secret ${s.team}" data-a="toggle-secret">
     <div class="badge ${s.team}">${s.team === 'good' ? '好人阵营' : '坏人阵营'}</div>
+    <p class="secret-me">你是 <b>${esc(st.me.name)}</b></p>
     <img class="role-art" src="/roles/${esc(s.role)}.svg" alt="${esc(s.roleName)}" width="140" height="140">
     <div class="role">${esc(s.roleName)}</div>
     <p>${esc(s.desc)}</p>

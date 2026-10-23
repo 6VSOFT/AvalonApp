@@ -374,10 +374,10 @@ function nightInfo(g, me) {
   }
   if (role === 'percival') {
     const hasMorgana = Object.values(g.roles).includes('morgana');
-    return { label: hasMorgana ? '梅林 / 莫甘娜（无法分辨）' : '梅林', ids: others.filter(id => ['merlin', 'morgana'].includes(g.roles[id])), note: null };
+    return { label: hasMorgana ? '其中一人是梅林，另一人是莫甘娜（无法分辨）' : '梅林', ids: others.filter(id => ['merlin', 'morgana'].includes(g.roles[id])), note: null };
   }
   if (teamOf(role) === 'evil' && role !== 'oberon') {
-    return { label: '你的坏人同伴', ids: others.filter(id => teamOf(g.roles[id]) === 'evil' && g.roles[id] !== 'oberon'),
+    return { label: '你的坏人同伴（不含你自己）', ids: others.filter(id => teamOf(g.roles[id]) === 'evil' && g.roles[id] !== 'oberon'),
       note: Object.values(g.roles).includes('oberon') ? '奥伯伦也是坏人，但你不知道他是谁。' : null };
   }
   return { label: null, ids: [], note: null };
