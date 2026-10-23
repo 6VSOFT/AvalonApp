@@ -1,39 +1,42 @@
-// Production API on Netlify: the shared handler from src/api.js backed by Netlify Blobs.
-// Each room is one JSON blob; writes use onlyIfMatch (compare-and-set on the etag),
-// so concurrent votes or cards from different phones can never overwrite each other.
-import { getStore } from '@netlify/blobs';
+// Production API on Netlify: the shared handler from src/api.js backed by Netlify Database
+// (Postgres). Each room is one row; writes are UPDATE ... WHERE version = <version read>,
+// which Postgres applies atomically, so concurrent votes or cards from different phones
+// can never overwrite each other and reads are never stale.
+import { getDatabase } from '@netlify/database';
 import qrcode from 'qrcode';
 import api from '../../src/api.js';
 
-const rooms = () => getStore({ name: 'rooms', consistency: 'strong' });
-const presence = () => getStore({ name: 'presence', consistency: 'strong' });
+const db = getDatabase(); // once per instance, reused across requests
 
-const blobStore = {
+const dbStore = {
   async get(code) {
-    const r = await rooms().getWithMetadata(code, { type: 'json' });
-    return r && r.data ? { room: r.data, etag: r.etag } : null;
+    const { rows } = await db.pool.query('SELECT data, version FROM rooms WHERE code = $1', [code]);
+    return rows[0] ? { room: rows[0].data, etag: rows[0].version } : null;
   },
   async create(code, room) {
-    const { modified } = await rooms().setJSON(code, room, { onlyIfNew: true });
-    return modified;
+    const { rowCount } = await db.pool.query(
+      'INSERT INTO rooms (code, data) VALUES ($1, $2) ON CONFLICT (code) DO NOTHING', [code, room]);
+    return rowCount === 1;
   },
-  async put(code, room, etag) {
-    const { modified } = await rooms().setJSON(code, room, { onlyIfMatch: etag });
-    return modified;
+  async put(code, room, version) {
+    const { rowCount } = await db.pool.query(
+      'UPDATE rooms SET data = $2, version = version + 1, updated_at = NOW() WHERE code = $1 AND version = $3',
+      [code, room, version]);
+    return rowCount === 1;
   },
   async getPresence(code) {
-    return (await presence().get(code, { type: 'json' })) || {};
+    const { rows } = await db.pool.query('SELECT player_id, seen_at FROM presence WHERE code = $1', [code]);
+    return Object.fromEntries(rows.map(r => [r.player_id, Number(r.seen_at)]));
   },
-  // Presence is advisory (the online dot), so a lost update here is harmless: last write wins.
   async touch(code, playerId) {
-    const store = presence();
-    const map = (await store.get(code, { type: 'json' })) || {};
-    map[playerId] = Date.now();
-    await store.setJSON(code, map);
+    await db.pool.query(
+      `INSERT INTO presence (code, player_id, seen_at) VALUES ($1, $2, $3)
+       ON CONFLICT (code, player_id) DO UPDATE SET seen_at = EXCLUDED.seen_at`,
+      [code, playerId, Date.now()]);
   },
 };
 
-const handle = api.createApi(blobStore, qrcode);
+const handle = api.createApi(dbStore, qrcode);
 
 export default async (req, context) => handle(req, context.ip);
 

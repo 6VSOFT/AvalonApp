@@ -1,23 +1,13 @@
-// Blobs never expire on their own: delete rooms (and their presence stamps)
-// that have not changed for 12 hours. Runs hourly at minute 0, UTC.
-import { getStore } from '@netlify/blobs';
+// Delete rooms (and their presence rows) that have not changed for 12 hours.
+// Runs hourly at minute 0, UTC.
+import { getDatabase } from '@netlify/database';
 
-const ROOM_TTL_MS = 12 * 60 * 60 * 1000;
+const db = getDatabase();
 
 export default async () => {
-  const rooms = getStore({ name: 'rooms', consistency: 'strong' });
-  const presence = getStore({ name: 'presence', consistency: 'strong' });
-  const { blobs } = await rooms.list();
-  let deleted = 0;
-  for (const { key } of blobs) {
-    const room = await rooms.get(key, { type: 'json' });
-    if (!room || Date.now() - room.updatedAt > ROOM_TTL_MS) {
-      await rooms.delete(key);
-      await presence.delete(key);
-      deleted++;
-    }
-  }
-  console.log(`cleanup: ${deleted} of ${blobs.length} rooms deleted`);
+  const { rowCount } = await db.pool.query("DELETE FROM rooms WHERE updated_at < NOW() - INTERVAL '12 hours'");
+  await db.pool.query('DELETE FROM presence WHERE code NOT IN (SELECT code FROM rooms)');
+  console.log(`cleanup: ${rowCount} rooms deleted`);
 };
 
 export const config = { schedule: '0 * * * *' };
