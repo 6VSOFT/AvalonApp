@@ -181,3 +181,14 @@ test('a write that loses a race is retried on fresh state, never overwriting the
   room = (await store.get(host.code)).room;
   assert.deepStrictEqual(room.game.votes, { [ps[1].playerId]: false, [ps[0].playerId]: true });
 });
+
+test('a dissolved room answers 410 to everyone, including polling and joining', async () => {
+  const { code, players } = await makeGame();
+  assert.strictEqual((await call('POST', `/api/rooms/${code}/action`, { type: 'dissolve' }, players[1].token)).status, 403);
+  assert.strictEqual((await call('POST', `/api/rooms/${code}/action`, { type: 'dissolve' }, players[0].token)).status, 200);
+  const poll = await call('GET', `/api/rooms/${code}/state`, null, players[2].token);
+  assert.strictEqual(poll.status, 410);
+  assert.strictEqual(poll.data.message, '房主已解散房间');
+  assert.strictEqual((await call('POST', `/api/rooms/${code}/join`, { name: 'Late' })).status, 410);
+  assert.strictEqual((await call('POST', `/api/rooms/${code}/action`, { type: 'vote', approve: true }, players[3].token)).status, 410);
+});

@@ -74,11 +74,11 @@ async function act(type, extra = {}) {
   render();
   try {
     const r = await api('POST', `/api/rooms/${s.code}/action`, { type, ...extra }, s.token);
-    if (type === 'leave') { leaveToHome(); return; }
+    if (type === 'leave' || type === 'dissolve') { leaveToHome(); return; }
     if (r.state) applyState(r.state);
   } catch (e) {
     toast(e.message);
-    if (e.status === 401 || e.status === 404) { leaveToHome(); return; }
+    if (e.status === 401 || e.status === 404 || e.status === 410) { leaveToHome(); return; }
   } finally {
     ui.busy = false;
     render();
@@ -114,6 +114,7 @@ async function poll() {
     }
   } catch (e) {
     if (seq !== ui.pollSeq) return;
+    if (e.status === 410) { toast(e.message); leaveToHome(); return; } // the host dissolved the room
     if (e.status === 401 || e.status === 404) { toast('房间已失效，或你已不在该房间'); leaveToHome(); return; }
     ui.connected = false;
     updateNet();
@@ -140,6 +141,10 @@ function applyState(st) {
     ui.target = null;
   }
   if (st.gameNo !== ui.lastGameNo) { ui.showSecret = false; ui.lastGameNo = st.gameNo; }
+  // Show each room notice once; one that was already there when we arrived is old news.
+  const noticeId = st.notice ? st.notice.id : null;
+  if (prev && noticeId && noticeId !== ui.lastNoticeId) toast(st.notice.text, 'info');
+  ui.lastNoticeId = noticeId;
   ui.state = st;
 }
 
@@ -287,9 +292,9 @@ function viewGame() {
       <span class="row"><span class="dot ${ui.connected ? 'on' : ''}"></span><b>${esc(st.me.name)}</b>
       ${st.secret ? '<button class="small secondary" data-a="secret">我的身份</button>' : ''}</span>
     </div>`;
-  if (st.status === 'lobby') return top + viewLobby(st);
-  if (st.status === 'ended') return top + viewEnded(st);
-  return top + viewBoard(st) + viewPhase(st) + viewHistory(st);
+  if (st.status === 'lobby') return top + viewLobby(st) + roomExit(st);
+  if (st.status === 'ended') return top + viewEnded(st) + roomExit(st);
+  return top + viewBoard(st) + viewPhase(st) + viewHistory(st) + roomExit(st);
 }
 
 const nameOf = (st, id) => (st.players.find(p => p.id === id) || {}).name || '?';
@@ -351,8 +356,33 @@ function viewLobby(st) {
       ${st.me.isHost ? `<button data-a="start" ${allReady && !ui.busy ? '' : 'disabled'}>开始游戏</button>
         <p class="muted center">${!full ? `需要 ${size} 名玩家才能开始` : allReady ? '所有人已准备' : '等待所有玩家准备'}</p>`
         : '<p class="muted center">等待房主开始游戏</p>'}
-      <button class="ghost" data-a="leave" ${ui.busy ? 'disabled' : ''}>离开房间</button>
     </div>`;
+}
+
+// Leave / dissolve, kept at the bottom and away from game actions; both ask for confirmation.
+function roomExit(st) {
+  return `<div class="room-exit">
+    <button class="danger-outline" data-a="leave" ${ui.busy ? 'disabled' : ''}>离开房间</button>
+    ${st.me.isHost ? `<button class="danger-outline" data-a="dissolve" ${ui.busy ? 'disabled' : ''}>解散房间</button>` : ''}
+  </div>`;
+}
+
+// A confirmation dialog for destructive actions. Resolves true only on the red button.
+function confirmDanger(title, body, okLabel) {
+  return new Promise(resolve => {
+    ui.confirmResolve = resolve;
+    $modal.innerHTML = `<div class="card stack confirm-danger">
+      <h3>${esc(title)}</h3><p>${esc(body)}</p>
+      <div class="grid2"><button class="ghost" data-a="confirm-no">取消</button><button class="bad" data-a="confirm-yes">${esc(okLabel)}</button></div>
+    </div>`;
+    $modal.classList.remove('hidden');
+  });
+}
+function closeConfirm(answer) {
+  $modal.classList.add('hidden');
+  const resolve = ui.confirmResolve;
+  ui.confirmResolve = null;
+  if (resolve) resolve(answer);
 }
 
 function viewBoard(st) {
@@ -524,7 +554,6 @@ function viewEnded(st) {
       <table class="history"><tr><th>轮次</th><th>提名与投票</th><th>结果</th></tr>${historyRows(st)}</table></div>
     <div class="stack">
       ${st.me.isHost ? `<button data-a="restart" ${ui.busy ? 'disabled' : ''}>重新开始（重新分配身份）</button>` : '<p class="muted center">等待房主重新开始</p>'}
-      <button class="ghost" data-a="exit">返回首页</button>
     </div>`;
 }
 
@@ -680,7 +709,21 @@ document.addEventListener('click', async e => {
     case 'swap-no': act('swap_answer', { from: el.dataset.v, accept: false }); break;
     case 'swap-cancel': act('swap_cancel'); break;
     case 'start': act('start'); break;
-    case 'leave': if (confirm('确定离开房间？')) act('leave'); break;
+    case 'leave': {
+      const inGame = st.status === 'playing';
+      const ok = await confirmDanger('离开房间？',
+        inGame ? '游戏正在进行，你离开后本局会立即结束，所有人回到大厅。' : '你将离开这个房间，座位会空出来。',
+        inGame ? '离开并结束本局' : '离开房间');
+      if (ok) act('leave');
+      break;
+    }
+    case 'dissolve': {
+      const ok = await confirmDanger('解散房间？', '房间会立即关闭，所有玩家都会回到首页，进行中的游戏也会结束。此操作无法撤销。', '解散房间');
+      if (ok) act('dissolve');
+      break;
+    }
+    case 'confirm-yes': closeConfirm(true); break;
+    case 'confirm-no': closeConfirm(false); break;
     case 'ack': act('ack'); break;
     case 'pick': {
       const id = el.dataset.id;
@@ -706,7 +749,6 @@ document.addEventListener('click', async e => {
       if (ui.target && confirm(`确认刺杀 ${nameOf(st, ui.target)}？此操作不可撤销。`)) act('assassinate', { target: ui.target });
       break;
     case 'restart': if (confirm('重新开始将重新随机分配所有身份，确定吗？')) act('restart'); break;
-    case 'exit': leaveToHome(); break;
   }
 });
 

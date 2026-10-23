@@ -173,6 +173,9 @@ function clearSwaps(room, playerId) {
 }
 const bySeat = players => players.slice().sort((a, b) => a.seat - b.seat);
 
+// A short public message every client shows once (e.g. why the game just ended).
+function setNotice(room, text) { room.notice = { id: newId(4), text }; }
+
 function touch(room) { room.version++; room.updatedAt = Date.now(); }
 
 function findByToken(room, token) {
@@ -227,6 +230,7 @@ const teamOf = role => ROLES[role].team;
 function applyAction(room, player, action) {
   if (!player) fail('auth', '无效的玩家会话');
   if (!action || typeof action.type !== 'string') fail('bad_action', '无效操作');
+  if (room.status === 'closed') fail('closed', '房主已解散房间');
   const g = room.game;
   const need = (cond, code, msg) => { if (!cond) fail(code, msg); };
   const needPhase = (ph) => need(room.status === 'playing' && g && g.phase === ph, 'bad_phase', '当前阶段不能执行此操作');
@@ -283,10 +287,24 @@ function applyAction(room, player, action) {
       break;
     }
     case 'leave': {
-      need(room.status === 'lobby', 'bad_phase', '游戏进行中不能离开房间');
+      // A game cannot go on without a player, so leaving during (or after) a game ends it
+      // for everyone and the room goes back to the lobby.
+      const inGame = room.status !== 'lobby';
       room.players = room.players.filter(p => p.id !== player.id);
       clearSwaps(room, player.id);
-      if (room.hostId === player.id) room.hostId = room.players[0] ? room.players[0].id : null;
+      if (room.hostId === player.id) room.hostId = room.players.length ? bySeat(room.players)[0].id : null;
+      if (inGame) {
+        room.status = 'lobby';
+        room.game = null;
+        room.players.forEach(p => { p.ready = false; });
+      }
+      setNotice(room, inGame && g.phase !== 'ended' ? `${player.name} 离开了房间，本局已结束` : `${player.name} 离开了房间`);
+      break;
+    }
+    case 'dissolve': {
+      need(room.hostId === player.id, 'forbidden', '只有房主可以解散房间');
+      room.status = 'closed';
+      room.game = null;
       break;
     }
     case 'start': {
@@ -464,6 +482,7 @@ function viewFor(room, player, online = new Set()) {
     status: room.status,
     hostId: room.hostId,
     config: configView(room.config),
+    notice: room.notice || null,
     swaps: room.status === 'lobby' ? Object.entries(room.swaps || {}).map(([from, to]) => ({ from, to })) : [],
     me: { id: player.id, name: player.name, isHost: room.hostId === player.id },
     players: order.map(id => {

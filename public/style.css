@@ -213,3 +213,11 @@ button.tab.on { background: var(--blue-light); color: var(--navy); border-color:
 .team-evil { color: var(--evil); }
 .secret-me { margin: 10px 0 0; color: var(--muted); }
 .secret-me b { color: var(--navy); font-size: 18px; }
+
+/* leave / dissolve: separated from game actions, outlined in red */
+.room-exit { display: flex; gap: 10px; margin-top: 28px; padding-top: 16px; border-top: 1px dashed var(--line); }
+.room-exit button { flex: 1; }
+button.danger-outline { background: var(--card); color: var(--bad); border-color: rgba(189, 48, 59, .45); box-shadow: none; font-size: 16px; min-height: 48px; }
+button.danger-outline:active:not(:disabled) { background: #fff3f4; }
+.confirm-danger { border-top: 4px solid var(--bad); }
+.confirm-danger h3 { color: var(--bad); }

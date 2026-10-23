@@ -1,6 +1,6 @@
 // App-shell cache only. API calls and the event stream always go to the network,
 // so the app never pretends an action succeeded while offline.
-const CACHE = 'avalon-v6';
+const CACHE = 'avalon-v7';
 const SHELL = [
   '/', '/index.html', '/app.js', '/style.css', '/manifest.webmanifest',
   '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png',

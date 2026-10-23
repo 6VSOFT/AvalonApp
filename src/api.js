@@ -11,7 +11,7 @@ const MAX_BODY = 4 * 1024;
 const MAX_WRITE_ATTEMPTS = 6;
 const ONLINE_MS = 25 * 1000; // a player counts as online if they polled this recently
 const PRESENCE_REFRESH_MS = 8 * 1000; // how often a poll refreshes the player's presence stamp
-const STATUS = { auth: 401, forbidden: 403, not_found: 404, duplicate: 409, full: 409, started: 409, name_taken: 409, busy: 503, rate: 429 };
+const STATUS = { auth: 401, forbidden: 403, not_found: 404, duplicate: 409, full: 409, started: 409, name_taken: 409, busy: 503, rate: 429, closed: 410 };
 
 // Everything the create-room and rules screens need, from the engine's own tables.
 const OPTIONS = {
@@ -79,6 +79,7 @@ function createApi(store, qrcode = require('qrcode')) {
     if (!game.isValidCode(code)) fail('not_found', '房间代码无效');
     const r = await store.get(code);
     if (!r) fail('not_found', '房间不存在');
+    if (r.room.status === 'closed') fail('closed', '房主已解散房间');
     migrate(r.room);
     return r;
   }

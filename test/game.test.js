@@ -422,3 +422,43 @@ test('seats: shrinking the table moves players beyond it to free seats', () => {
   G.applyAction(r, host, { type: 'config', config: { size: 5 } });
   assert.ok(a.seat < 5 && a.seat !== host.seat);
 });
+
+test('leave: in the lobby frees the seat; the host role passes to the lowest seat', () => {
+  const { room, host } = lobby(6);
+  G.applyAction(room, host, { type: 'leave' });
+  assert.strictEqual(room.players.length, 5);
+  assert.strictEqual(room.hostId, room.players.find(p => p.seat === 1).id);
+  assert.match(G.viewFor(room, room.players[0]).notice.text, /离开了房间/);
+});
+
+test('leave: during a game it ends the game for everyone and returns to the lobby', () => {
+  const room = setup(6);
+  runMission(room, 1);
+  const leaver = room.players[3];
+  G.applyAction(room, leaver, { type: 'leave' });
+  assert.strictEqual(room.status, 'lobby');
+  assert.strictEqual(room.game, null);
+  assert.strictEqual(room.players.length, 5);
+  assert.ok(room.players.every(p => !p.ready));
+  const v = G.viewFor(room, room.players[0]);
+  assert.ok(!('secret' in v), 'no roles leak after the game is aborted');
+  assert.strictEqual(v.notice.text, `${leaver.name} 离开了房间，本局已结束`);
+  // The remaining players can fill the seat and play again.
+  G.addPlayer(room, 'New');
+  room.players.forEach(p => G.applyAction(room, p, { type: 'ready', value: true }));
+  G.applyAction(room, P(room, room.hostId), { type: 'start' });
+  assert.strictEqual(room.status, 'playing');
+});
+
+test('dissolve: host only; afterwards every action is refused', () => {
+  const room = setup(6);
+  const host = P(room, room.hostId);
+  const other = room.players.find(p => p !== host);
+  throwsCode(() => G.applyAction(room, other, { type: 'dissolve' }), 'forbidden');
+  G.applyAction(room, host, { type: 'dissolve' });
+  assert.strictEqual(room.status, 'closed');
+  assert.strictEqual(room.game, null);
+  for (const action of [{ type: 'ready', value: true }, { type: 'leave' }, { type: 'dissolve' }]) {
+    throwsCode(() => G.applyAction(room, host, action), 'closed');
+  }
+});
