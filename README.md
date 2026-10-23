@@ -14,6 +14,16 @@ npm test           # 自动化测试
 
 手机与电脑在同一 Wi-Fi 下时，用 `http://<电脑局域网IP>:3000` 访问。PWA 安装（添加到主屏幕）和 Service Worker 需要 HTTPS 或 localhost，正式使用请部署到带 HTTPS 的主机（Render、Railway、Fly.io、任意 VPS + Caddy 等）。注意：本服务使用长连接（SSE）和内存状态，应部署为**单实例常驻 Node 进程**，不适合无状态 Serverless（如 Vercel Functions、GitHub Pages）。
 
+## 部署到 Render（HTTPS）
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/6VSOFT/AvalonApp)
+
+点击上方按钮，用 GitHub 登录 Render，确认 `render.yaml` 中的服务后点 **Apply**。几分钟后得到 `https://avalon-xxxx.onrender.com`，6 台手机直接打开即可，每次推送到 `main` 会自动重新部署。
+
+免费方案的限制：
+* 闲置约 15 分钟后休眠，下次打开需等待约 30–60 秒唤醒（游戏进行中有实时连接，不会休眠）。
+* 没有持久磁盘：服务重启或重新部署后，进行中的房间会丢失。不要在对局中推送新代码。需要持久化时可升级付费方案并挂载磁盘，把 `DATA_FILE` 指向磁盘路径。
+
 ## 架构
 
 | 文件 | 作用 |

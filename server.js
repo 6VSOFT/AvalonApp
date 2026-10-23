@@ -139,6 +139,7 @@ async function handle(req, res) {
   const parts = url.pathname.split('/').filter(Boolean);
   const ip = clientIp(req);
 
+  if (url.pathname === '/healthz') return send(res, 200, { ok: true });
   if (parts[0] !== 'api') return serveStatic(req, res, url.pathname);
   if (req.method === 'POST' && limited('post:' + ip, 60, 10000)) return send(res, 429, { error: 'rate', message: '操作过于频繁，请稍后再试' });
 
