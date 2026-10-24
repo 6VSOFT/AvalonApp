@@ -306,6 +306,8 @@ function viewGame() {
 const nameOf = (st, id) => (st.players.find(p => p.id === id) || {}).name || '?';
 // Seat numbers are public (the lobby seating), so the client shows them next to names.
 const seatNo = (st, id) => st.players.findIndex(p => p.id === id) + 1;
+// "6号 Ahmad": how a player is named anywhere outside the seat list itself (not HTML-escaped).
+const seatName = (st, id) => `${seatNo(st, id)}号 ${nameOf(st, id)}`;
 // "赞成 4【1号、2号、3号、4号】· 反对 1【5号】" (attempts saved before votes were recorded show counts only).
 function voteBreakdown(st, att) {
   const seats = ids => (ids ? `【${ids.map(id => seatNo(st, id) + '号').join('、') || '无'}】` : '');
@@ -484,7 +486,7 @@ function missionNotice(st) {
       : `<div class="notice ok">组队通过：${voteBreakdown(st, att)}</div>`;
   }
   if (st.phase === 'team' && att && !att.passed) {
-    return `<div class="notice bad">上次组队被否决：${voteBreakdown(st, att)}<br>队长移交给 <b>${esc(nameOf(st, st.leaderId))}</b>
+    return `<div class="notice bad">上次组队被否决：${voteBreakdown(st, att)}<br>队长移交给 <b>${esc(seatName(st, st.leaderId))}</b>
       ${st.forced ? '<br><b>已连续 5 次否决，进入强制轮：本次组队不投票，直接执行任务。</b>' : ''}</div>`;
   }
   const prev = st.phase === 'assassin' ? cur : (st.round > 1 && cur.attempts.length === 0 ? st.history[st.round - 2] : null);
@@ -492,10 +494,10 @@ function missionNotice(st) {
     const r = prev.result;
     return `<div class="notice ${r.success ? 'ok' : 'bad'}">
       <b>第 ${prev.round} 轮任务${r.success ? '成功' : '失败'}</b><br>
-      队员：${r.team.map(id => esc(nameOf(st, id))).join('、')}<br>
+      队员：${r.team.map(id => esc(seatName(st, id))).join('、')}<br>
       成功牌 ${r.successCards} · 失败牌 ${r.failCards}<br>
       当前比分：成功 ${st.successes} · 失败 ${st.fails}<br>
-      ${st.phase === 'assassin' ? '好人已完成三次任务，进入刺杀阶段。' : `下一位队长：<b>${esc(nameOf(st, st.leaderId))}</b>`}
+      ${st.phase === 'assassin' ? '好人已完成三次任务，进入刺杀阶段。' : `下一位队长：<b>${esc(seatName(st, st.leaderId))}</b>`}
     </div>`;
   }
   return '';
@@ -503,7 +505,7 @@ function missionNotice(st) {
 
 function viewPhase(st) {
   const me = st.me.id;
-  const leader = nameOf(st, st.leaderId);
+  const leader = seatName(st, st.leaderId);
   const busy = ui.busy ? 'disabled' : '';
   let body = '';
   switch (st.phase) {
@@ -532,7 +534,7 @@ function viewPhase(st) {
     case 'vote': {
       const voted = 'myVote' in st;
       body = `<div class="phase">第 ${st.round} 轮 · 投票</div><h2>是否同意这支队伍？</h2>
-        <p>队长 <b>${esc(leader)}</b> 提名：${st.team.map(id => `<span class="badge good">${esc(nameOf(st, id))}</span>`).join(' ')}</p>
+        <p>队长 <b>${esc(leader)}</b> 提名：${st.team.map(id => `<span class="badge good">${esc(seatName(st, id))}</span>`).join(' ')}</p>
         <p class="muted">需要至少 ${st.approvalsNeeded} 票赞成才能通过。投票在全员投完前保密。</p>
         ${voted ? `<div class="notice">你已投票：<b>${st.myVote ? '赞成 ✓' : '反对 ✗'}</b>，等待其他玩家…</div>`
           : `<div class="grid2"><button class="ok" data-a="vote" data-v="1" ${busy}>赞成</button><button class="bad" data-a="vote" data-v="0" ${busy}>反对</button></div>`}
@@ -549,7 +551,7 @@ function viewPhase(st) {
       else action = `<p class="muted">你可以选择成功或失败。只有数量会被公布。</p>
         <div class="grid2"><button class="ok" data-a="card" data-v="success" ${busy}>成功</button><button class="bad" data-a="card" data-v="fail" ${busy}>失败</button></div>`;
       body = `<div class="phase">第 ${st.round} 轮 · 执行任务</div><h2>任务进行中</h2>
-        <p>队员：${st.team.map(id => `<span class="badge good">${esc(nameOf(st, id))}</span>`).join(' ')}</p>
+        <p>队员：${st.team.map(id => `<span class="badge good">${esc(seatName(st, id))}</span>`).join(' ')}</p>
         ${st.failsNeeded > 1 ? `<div class="notice">本轮需要至少 ${st.failsNeeded} 张失败牌，任务才会失败。</div>` : ''}
         ${action}
         <p class="muted center" style="margin-top:8px">已提交 ${st.submittedCount}/${st.team.length}</p>`;
@@ -573,7 +575,7 @@ function viewPhase(st) {
         body = `<div class="phase">刺杀阶段</div><h2>选择你认为是梅林的玩家</h2>
           <p class="muted">确认后不可撤销。猜中梅林则坏人获胜。</p>
           ${playerList(st, { selectable: true, selected: ui.target ? [ui.target] : [], action: 'target', disabledId: me })}
-          <button class="bad" data-a="assassinate" ${ui.target && !ui.busy ? '' : 'disabled'}>${ui.target ? `刺杀 ${esc(nameOf(st, ui.target))}` : '请选择目标'}</button>`;
+          <button class="bad" data-a="assassinate" ${ui.target && !ui.busy ? '' : 'disabled'}>${ui.target ? `刺杀 ${esc(seatName(st, ui.target))}` : '请选择目标'}</button>`;
       } else {
         body = `<div class="phase">刺杀阶段</div><h2>刺客正在选择刺杀目标…</h2>
           <p class="muted">坏人可以公开讨论谁是梅林，但只有刺客能做出最终选择。</p>${playerList(st)}`;
@@ -586,7 +588,7 @@ function viewPhase(st) {
 
 function historyRows(st) {
   return st.history.filter(h => h.attempts.length || h.result).map(h => {
-    const atts = h.attempts.map((a, i) => `<div>#${i + 1} ${esc(nameOf(st, a.leader))}：${a.team.map(id => esc(nameOf(st, id))).join('、')}
+    const atts = h.attempts.map((a, i) => `<div>#${i + 1} ${esc(seatName(st, a.leader))}：${a.team.map(id => esc(seatName(st, id))).join('、')}
       <span class="badge ${a.passed ? 'ok' : 'bad'}">${a.forced ? '强制' : `${a.approve}:${a.reject}`}</span>
       ${a.forced ? '' : `<div class="muted vote-seats">${voteBreakdown(st, a)}</div>`}</div>`).join('');
     const res = h.result ? `<span class="badge ${h.result.success ? 'ok' : 'bad'}">${h.result.success ? '成功' : '失败'} ${h.result.successCards}✓ ${h.result.failCards}✗</span>` : '<span class="badge">进行中</span>';
@@ -605,8 +607,8 @@ function viewEnded(st) {
   const a = st.assassination;
   return `
     <div class="banner ${good ? 'good' : 'evil'}"><h2>${good ? '好人阵营胜利' : '坏人阵营胜利'}</h2><p>${esc(st.reason)}</p></div>
-    ${a ? `<div class="card"><h3>刺杀结果</h3><p>刺客选择了 <b>${esc(nameOf(st, a.target))}</b> —— ${a.hit ? '正是梅林！' : '不是梅林。'}</p></div>` : ''}
-    <div class="card"><div class="card-head"><h3>身份揭晓</h3><button class="small ghost" data-a="copy" data-v="reveal">复制</button></div><ul class="players reveal">${st.reveal.map(r => `<li><img class="role-reveal" src="/roles/${esc(r.role)}.svg" alt="${esc(r.roleName)}" width="36" height="36"><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
+    ${a ? `<div class="card"><h3>刺杀结果</h3><p>刺客选择了 <b>${esc(seatName(st, a.target))}</b> —— ${a.hit ? '正是梅林！' : '不是梅林。'}</p></div>` : ''}
+    <div class="card"><div class="card-head"><h3>身份揭晓</h3><button class="small ghost" data-a="copy" data-v="reveal">复制</button></div><ul class="players reveal">${st.reveal.map((r, i) => `<li><span class="seat">${i + 1}</span><img class="role-reveal" src="/roles/${esc(r.role)}.svg" alt="${esc(r.roleName)}" width="36" height="36"><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
       <span class="badge ${r.team}">${esc(r.roleName)}</span></li>`).join('')}</ul></div>
     <div class="card"><div class="card-head"><h3>任务记录</h3><button class="small ghost" data-a="copy" data-v="history">复制</button></div>
       <div class="score"><div class="g"><b>${st.successes}</b>成功任务</div><div class="e"><b>${st.fails}</b>失败任务</div></div>
@@ -872,7 +874,7 @@ document.addEventListener('click', async e => {
       if (ui.target && await confirmDialog(`查验 ${seatNo(st, ui.target)}号 ${nameOf(st, ui.target)}？`, '确认后不可更改，湖中女神会交给对方。', '查验', 'primary')) act('lady', { target: ui.target });
       break;
     case 'assassinate':
-      if (ui.target && await confirmDialog(`确认刺杀 ${nameOf(st, ui.target)}？`, '此操作不可撤销。猜中梅林则坏人获胜，否则好人获胜。', '刺杀')) act('assassinate', { target: ui.target });
+      if (ui.target && await confirmDialog(`确认刺杀 ${seatName(st, ui.target)}？`, '此操作不可撤销。猜中梅林则坏人获胜，否则好人获胜。', '刺杀')) act('assassinate', { target: ui.target });
       break;
     case 'restart': if (await confirmDialog('重新开始？', '将回到大厅并重新随机分配所有身份。', '重新开始', 'primary')) act('restart'); break;
   }
