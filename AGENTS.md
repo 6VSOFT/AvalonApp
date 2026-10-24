@@ -31,7 +31,7 @@ Run `npm test` before every commit. All tests must pass.
 | `server.js` | Local server: static files + the shared API on an in-memory store saved to `data/rooms.json`. |
 | `public/app.js` | Whole client: rendering, events, session in `localStorage`, polling `GET /api/rooms/:code/state` (1.5 s visible, 8 s hidden). |
 | `public/style.css`, `index.html`, `manifest.webmanifest`, `sw.js`, `icons/` | PWA shell. Blue/white "tech" style; the palette is CSS variables on `:root`. |
-| `public/roles/<role>.svg` | Original role artwork, one per role id in `ROLES`. Good roles blue, evil roles red/orange, same hexagon frame. A new role needs a new SVG and an entry in `SHELL` in `sw.js`. |
+| `public/roles/<role>.svg` | Original role illustrations (character busts), one per role id in `ROLES`. Good roles blue, evil roles red/orange, same hexagon frame and 160×160 viewBox. Served no-cache so redrawn art reaches phones at once. A new role needs a new SVG and an entry in `SHELL` in `sw.js`. |
 | `test/game.test.js` | Engine tests (rules, presets, secrecy of views). |
 | `test/server.test.js` | HTTP tests (auth, secrecy over the wire, concurrent requests, polling, and a forced write conflict that must retry without losing either write). |
 

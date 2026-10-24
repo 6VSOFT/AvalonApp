@@ -56,8 +56,8 @@ function serveStatic(res, pathname) {
     const ext = path.extname(file);
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      // App code must revalidate so a redeploy never leaves phones running stale JS; icons can cache.
-      'Cache-Control': ext === '.png' || ext === '.svg' ? 'public, max-age=86400' : 'no-cache',
+      // App code and role art must revalidate so a redeploy reaches phones at once; app icons can cache.
+      'Cache-Control': rel.startsWith('/icons/') ? 'public, max-age=86400' : 'no-cache',
       'X-Content-Type-Options': 'nosniff',
     });
     res.end(buf);

@@ -1,10 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <title>忠臣：守护王冠的坚盾</title>
-  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#edf4ff" stroke="#123367" stroke-width="4"/>
-  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#86b7fb" stroke-width="2"/>
-  <path d="m80 33 38 15v34q0 30-38 48-38-18-38-48V48Z" fill="#1764dc" stroke="#123367" stroke-width="5" stroke-linejoin="round"/>
-  <path d="m80 44 27 11v27q0 22-27 36Z" fill="#b5d5ff"/>
-  <path d="m59 65 11 10 10-18 10 18 11-10-5 27H64Z" fill="#fff" stroke="#123367" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M67 101h26M29 64v29m102-29v29" stroke="#1764dc" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="80" cy="137" r="3" fill="#1764dc"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <title>亚瑟的忠臣：持长矛的王国卫兵</title>
+  <defs><clipPath id="hex"><path d="m80 9 62 36v70l-62 36-62-36V45Z"/></clipPath></defs>
+  <path d="m80 4 67 39v74l-67 39-67-39V43Z" fill="#123367"/>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="#e8f1ff"/>
+  <g clip-path="url(#hex)">
+    <path d="M40 30v130" stroke="#7a5536" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="m40 14 7 17H33Z" fill="#cdd8ea" stroke="#123367" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M42 36h24l-7 7 7 7H42Z" fill="#1764dc"/>
+    <path d="M38 160c3-28 17-42 42-44 25 2 39 16 42 44Z" fill="#1764dc"/>
+    <path d="M66 118h28l-2 42H68Z" fill="#edf4ff"/>
+    <path d="m69 136 4-11 7 7 7-7 4 11Z" fill="#1764dc"/>
+    <rect x="69" y="137" width="22" height="4" rx="1" fill="#1764dc"/>
+    <path d="M58 124q-12 4-16 0l2-6q8 0 16-2Z" fill="#1d4f9f"/>
+    <circle cx="44" cy="120" r="6" fill="#f2d4bd"/>
+    <rect x="73" y="98" width="14" height="16" rx="3" fill="#e3c4ad"/>
+    <ellipse cx="80" cy="85" rx="14" ry="15" fill="#f2d4bd"/>
+    <path d="M62 74c0-15 8-23 18-23s18 8 18 23Z" fill="#cdd8ea" stroke="#123367" stroke-width="2"/>
+    <ellipse cx="80" cy="74" rx="27" ry="6.5" fill="#aebfdb" stroke="#123367" stroke-width="2"/>
+    <circle cx="74" cy="86" r="2" fill="#123367"/>
+    <circle cx="86" cy="86" r="2" fill="#123367"/>
+    <path d="M74.5 93.5q5.5 4.5 11 0" stroke="#a5705a" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+  </g>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="none" stroke="#86b7fb" stroke-width="2"/>
 </svg>

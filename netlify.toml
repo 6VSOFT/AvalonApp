@@ -19,11 +19,7 @@
     Cache-Control = "no-cache"
     X-Content-Type-Options = "nosniff"
 
-[[headers]]
-  for = "/roles/*"
-  [headers.values]
-    Cache-Control = "public, max-age=86400"
-
+# Role art falls under the no-cache rule above so redrawn art reaches phones at once.
 [[headers]]
   for = "/icons/*"
   [headers.values]

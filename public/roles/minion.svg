@@ -1,10 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <title>爪牙：三道利爪的效忠印记</title>
-  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#fff0e9" stroke="#713126" stroke-width="4"/>
-  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#efab8b" stroke-width="2"/>
-  <path d="m80 31 41 23-9 53-32 25-32-25-9-53Z" fill="#713126" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
-  <path d="m80 40 32 18-8 44-24 20Z" fill="#b63d26"/>
-  <path d="m58 53 10 13-4 42-10-15Zm22-8 9 17-9 54-9-54Zm22 8 4 40-10 15-4-42Z" fill="#fff" stroke="#e6653d" stroke-width="2" stroke-linejoin="round"/>
-  <path d="m28 75 8 5-8 5m104-10-8 5 8 5" stroke="#b63d26" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="80" cy="140" r="3" fill="#e6653d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <title>莫德雷德爪牙：戴角盔、扛战斧的士兵</title>
+  <defs><clipPath id="hex"><path d="m80 9 62 36v70l-62 36-62-36V45Z"/></clipPath></defs>
+  <path d="m80 4 67 39v74l-67 39-67-39V43Z" fill="#5a1f14"/>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="#fff0e9"/>
+  <g clip-path="url(#hex)">
+    <path d="M37 160c4-28 19-42 43-44 24 2 39 16 43 44Z" fill="#7d2a1b"/>
+    <path d="M52 140q6 6 12 0 6 6 12 0 6 6 12 0 6 6 12 0 6 6 12 0M46 152q6 6 12 0 6 6 12 0 6 6 12 0 6 6 12 0 6 6 12 0 6 6 12 0" stroke="#5a1f14" stroke-width="2" fill="none"/>
+    <path d="m114 56-24 104" stroke="#5a3a24" stroke-width="5.5" stroke-linecap="round"/>
+    <path d="M109 50c13-7 24-3 28 8-9 0-15 4-19 13l-11-4Z" fill="#ecdcd2" stroke="#3b1510" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M100 128q4-12 10-14l6 4q-4 8-8 14Z" fill="#5a1f14"/>
+    <circle cx="106" cy="116" r="6" fill="#3b1510"/>
+    <rect x="73" y="100" width="14" height="16" rx="3" fill="#dcb19a"/>
+    <path d="M64 86h32v8q-2 15-16 17-14-2-16-17Z" fill="#e9c3ab"/>
+    <rect x="64" y="86" width="32" height="8" fill="#2a0f0b"/>
+    <circle cx="73" cy="90" r="2.2" fill="#ff9a4d"/>
+    <circle cx="87" cy="90" r="2.2" fill="#ff9a4d"/>
+    <path d="M74 103.5q6-3 12 0" stroke="#7d2a1b" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M60 88c0-19 8-31 20-31s20 12 20 31Z" fill="#5a1f14" stroke="#2a0f0b" stroke-width="2"/>
+    <path d="M80 57v31" stroke="#3b1510" stroke-width="2"/>
+    <path d="M62 71c-10-4-15-14-13-23 4 7 10 11 17 13ZM98 71c10-4 15-14 13-23-4 7-10 11-17 13Z" fill="#f0d9c8" stroke="#3b1510" stroke-width="1.8" stroke-linejoin="round"/>
+  </g>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="none" stroke="#f0a07a" stroke-width="2"/>
 </svg>

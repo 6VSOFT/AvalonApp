@@ -1,10 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <title>梅林：星辰与先知之杖</title>
-  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#edf4ff" stroke="#123367" stroke-width="4"/>
-  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#86b7fb" stroke-width="2"/>
-  <path d="M27 80h14m78 0h14M80 18v12m0 100v12" stroke="#1764dc" stroke-width="3"/>
-  <path d="m80 32 9 22 24 8-24 9-9 23-9-23-24-9 24-8Z" fill="#1764dc" stroke="#123367" stroke-width="4" stroke-linejoin="round"/>
-  <path d="m80 47 4 11 12 4-12 4-4 12-4-12-12-4 12-4Z" fill="#fff"/>
-  <path d="M80 94v30m-13 0h26M52 91l-9 21 20-9m45-12 9 21-20-9" stroke="#123367" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="80" cy="132" r="4" fill="#1764dc"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <title>梅林：持星辉法杖的老法师</title>
+  <defs>
+    <clipPath id="hex"><path d="m80 9 62 36v70l-62 36-62-36V45Z"/></clipPath>
+    <radialGradient id="glow"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#bcd9ff"/><stop offset="1" stop-color="#bcd9ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path d="m80 4 67 39v74l-67 39-67-39V43Z" fill="#123367"/>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="#e8f1ff"/>
+  <g clip-path="url(#hex)">
+    <g fill="#86b7fb"><circle cx="40" cy="50" r="1.8"/><circle cx="52" cy="34" r="1.3"/><circle cx="100" cy="30" r="1.4"/><circle cx="34" cy="82" r="1.3"/><circle cx="132" cy="80" r="1.5"/></g>
+    <path d="M28 160c2-30 16-48 32-56h40c16 8 30 26 32 56Z" fill="#1d4f9f"/>
+    <path d="M68 104 80 160l12-56Z" fill="#123367"/>
+    <path d="M48 110c-4-36 8-64 32-80 24 16 36 44 32 80-8-6-19-9-32-9s-24 3-32 9Z" fill="#2a63bd"/>
+    <path d="M59 101c-2-23 6-41 21-50 15 9 23 27 21 50-6-3-13-4-21-4s-15 1-21 4Z" fill="#123367"/>
+    <ellipse cx="80" cy="76" rx="13" ry="15" fill="#f2d4bd"/>
+    <path d="M69.5 70q4.5-3.5 9-1M81.5 69q4.5-2.5 9 1" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    <path d="M72 75.5h5M83 75.5h5" stroke="#123367" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M80 77v5" stroke="#d6a98f" stroke-width="2" stroke-linecap="round"/>
+    <path d="M66 82c0 22 6 38 14 50 8-12 14-28 14-50-4 6-9 8-14 8s-10-2-14-8Z" fill="#fbfdff" stroke="#c4d3ea" stroke-width="1.5"/>
+    <path d="M70.5 86.5q9.5-5.5 19 0-9.5 3.5-19 0Z" fill="#e9eff8" stroke="#c4d3ea" stroke-width="1.2"/>
+    <path d="M76 99l1 17M84 99l-1 17M80 100v22" stroke="#d5e0f0" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M118 60v100" stroke="#7a5536" stroke-width="5" stroke-linecap="round"/>
+    <path d="M98 122q12-12 24-10l2 10q-13 0-22 8Z" fill="#2a63bd"/>
+    <circle cx="119" cy="114" r="6" fill="#f2d4bd"/>
+    <circle cx="118" cy="48" r="20" fill="url(#glow)"/>
+    <circle cx="118" cy="48" r="7.5" fill="#eef6ff" stroke="#1764dc" stroke-width="2"/>
+    <path d="m118 38.5 2 6.5 6.5 3-6.5 2-2 6.5-2-6.5-6.5-2 6.5-3Z" fill="#1764dc"/>
+  </g>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="none" stroke="#86b7fb" stroke-width="2"/>
 </svg>

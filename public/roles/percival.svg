@@ -1,11 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <title>派西维尔：辨识双影的守望之眼</title>
-  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#edf4ff" stroke="#123367" stroke-width="4"/>
-  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#86b7fb" stroke-width="2"/>
-  <path d="m80 29 9 15-9 9-9-9Z" fill="#1764dc"/>
-  <path d="M34 79q46-51 92 0-46 51-92 0Z" fill="#fff" stroke="#123367" stroke-width="5" stroke-linejoin="round"/>
-  <circle cx="80" cy="79" r="23" fill="#1764dc" stroke="#123367" stroke-width="4"/>
-  <path d="M80 56a23 23 0 0 1 0 46Z" fill="#b5d5ff"/>
-  <path d="m80 65 9 14-9 14-9-14Z" fill="#fff" stroke="#123367" stroke-width="3"/>
-  <path d="m51 109 29 22 29-22M80 111v20" stroke="#1764dc" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <title>派西维尔：戴羽饰头盔的年轻骑士</title>
+  <defs><clipPath id="hex"><path d="m80 9 62 36v70l-62 36-62-36V45Z"/></clipPath></defs>
+  <path d="m80 4 67 39v74l-67 39-67-39V43Z" fill="#123367"/>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="#e8f1ff"/>
+  <g clip-path="url(#hex)">
+    <path d="M32 160c4-30 20-46 48-48 28 2 44 18 48 48Z" fill="#1764dc"/>
+    <path d="M48 160c2-24 12-38 32-40 20 2 30 16 32 40Z" fill="#cdd8ea" stroke="#123367" stroke-width="2"/>
+    <path d="M40 134c4-14 14-21 25-21l2 16c-10 0-19 2-27 5ZM120 134c-4-14-14-21-25-21l-2 16c10 0 19 2 27 5Z" fill="#aebfdb" stroke="#123367" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M69 142q11-9 22 0-11 9-22 0Z" fill="#fff" stroke="#123367" stroke-width="1.8"/>
+    <circle cx="80" cy="142" r="3" fill="#1764dc"/>
+    <rect x="73" y="98" width="14" height="16" rx="3" fill="#e3c4ad"/>
+    <ellipse cx="80" cy="83" rx="14" ry="16" fill="#f2d4bd"/>
+    <path d="M66.5 76q2-10 13.5-10t13.5 10q-6-4.5-13.5-4.5T66.5 76Z" fill="#c98b3c"/>
+    <path d="M61 86c-3-24 6-40 19-42 13 2 22 18 19 42l-4-3c0-13-6-21-15-21s-15 8-15 21Z" fill="#cdd8ea" stroke="#123367" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M64 82l-2 18 9 7M96 82l2 18-9 7" fill="none" stroke="#123367" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M80 62v13" stroke="#123367" stroke-width="3" stroke-linecap="round"/>
+    <path d="M80 45c5-15 22-22 36-15-11 2-19 8-24 18Z" fill="#1764dc" stroke="#123367" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M71 80l6 1.5M89 80l-6 1.5" stroke="#7a4a1e" stroke-width="2" stroke-linecap="round"/>
+    <path d="M72 85.5h5M83 85.5h5" stroke="#123367" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M76.5 94h7" stroke="#b07a62" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="none" stroke="#86b7fb" stroke-width="2"/>
 </svg>

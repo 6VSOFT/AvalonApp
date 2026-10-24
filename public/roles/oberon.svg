@@ -1,11 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
-  <title>奥伯伦：孤环中的鹿角游魂</title>
-  <path d="M80 5 145 42v76l-65 37-65-37V42Z" fill="#fff0e9" stroke="#713126" stroke-width="4"/>
-  <path d="m80 15 56 32v66l-56 32-56-32V47Z" stroke="#efab8b" stroke-width="2"/>
-  <path d="M40 92a43 43 0 0 0 80 0M40 61a43 43 0 0 1 11-16m69 16a43 43 0 0 0-11-16" stroke="#e6653d" stroke-width="4" stroke-linecap="round"/>
-  <path d="m65 73-16-20-2-19m3 21-15-7m60 25 16-20 2-19m-3 21 15-7" stroke="#713126" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="m80 58 23 23-6 25-17 18-17-18-6-25Z" fill="#fff" stroke="#713126" stroke-width="4" stroke-linejoin="round"/>
-  <path d="m80 64 16 19-5 21-11 12Z" fill="#f7c2a8"/>
-  <path d="m68 85 6 5m18-5-6 5m-6 11v8" stroke="#b63d26" stroke-width="4" stroke-linecap="round"/>
-  <path d="m80 30 5 8-5 8-5-8Z" fill="#e6653d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <title>奥伯伦：头生鹿角、独来独往的精灵王</title>
+  <defs><clipPath id="hex"><path d="m80 9 62 36v70l-62 36-62-36V45Z"/></clipPath></defs>
+  <path d="m80 4 67 39v74l-67 39-67-39V43Z" fill="#5a1f14"/>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="#fff0e9"/>
+  <g clip-path="url(#hex)">
+    <path d="M42 96a40 40 0 1 1 22 34" fill="none" stroke="#f3c2ab" stroke-width="3" stroke-linecap="round"/>
+    <path d="M40 160c4-24 18-36 40-38 22 2 36 14 40 38Z" fill="#9b3523"/>
+    <path d="m55 125 8 10 7-13 10 13 10-13 7 13 8-10" fill="none" stroke="#e8743b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="74" y="100" width="12" height="16" rx="3" fill="#ead0c1"/>
+    <path d="M70 70c-7-12-7-25-2-33M68.5 52c-7-2-11-9-11-15M69.5 44c4-4 6-8.5 6-13M90 70c7-12 7-25 2-33M91.5 52c7-2 11-9 11-15M90.5 44c-4-4-6-8.5-6-13" stroke="#b63d26" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+    <path d="m68 86-15-11 12 17ZM92 86l15-11-12 17Z" fill="#f3dccd" stroke="#c98a6e" stroke-width="1.4" stroke-linejoin="round"/>
+    <ellipse cx="80" cy="85" rx="12.5" ry="16" fill="#f3dccd"/>
+    <path d="M66.5 82q-2-19 13.5-21 15.5 2 13.5 21-4-9-13.5-11-9.5 2-13.5 11Z" fill="#5a1f14"/>
+    <path d="M71 87q3.5-3 7 0-3.5 2.2-7 0ZM82 87q3.5-2.2 7 0-3.5 1.6-7 0Z" fill="#3b1510"/>
+    <path d="M70.5 82.5q3.5-2.5 7.5-.5M82 82q4-2.5 7.5.5" stroke="#5a1f14" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+    <path d="M76 96q5 2.4 9.5-1" stroke="#9b3523" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+  </g>
+  <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="none" stroke="#f0a07a" stroke-width="2"/>
 </svg>
