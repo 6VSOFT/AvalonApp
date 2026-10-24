@@ -232,3 +232,6 @@ button.danger-outline:active:not(:disabled) { background: #fff3f4; }
 .secret .lady-results li.evil { background: var(--evil); }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .card-head h3 { margin: 0; }
+button.lady-btn { margin-top: 14px; min-height: 48px; font-size: 16px; color: #0b6b7a; border-color: #a6dde6; background: #f1fafc; }
+.lady-modal { text-align: left; }
+.lady-modal h3 { color: #0b6b7a; }

@@ -461,6 +461,17 @@ function playerList(st, opts = {}) {
 function myLadyChecks(st) {
   return st.lady ? st.lady.checks.filter(c => c.from === st.me.id && c.team) : [];
 }
+// Only a player who has checked someone sees this button; the results open in a modal.
+function ladyResultsButton(st) {
+  const n = myLadyChecks(st).length;
+  return n ? `<button class="ghost lady-btn" data-a="lady-results">🌊 我的湖中女神查验结果（${n}）</button>` : '';
+}
+function ladyResultsModal() {
+  $modal.innerHTML = `<div class="card secret lady-modal"><h3>🌊 湖中女神查验结果</h3>
+    <p class="muted">只有你能看到。查看时请注意遮挡屏幕。</p>${ladyResults(ui.state)}
+    <button class="ghost" style="margin-top:14px" data-a="close-modal">关闭</button></div>`;
+  $modal.classList.remove('hidden');
+}
 function ladyResults(st) {
   const mine = myLadyChecks(st);
   if (!mine.length) return '';
@@ -587,7 +598,7 @@ function viewPhase(st) {
       break;
     }
   }
-  return `<div class="card gold">${lastNotice(st)}${body}</div>`;
+  return `<div class="card gold">${lastNotice(st)}${body}${ladyResultsButton(st)}</div>`;
 }
 
 function historyRows(st) {
@@ -803,6 +814,7 @@ document.addEventListener('click', async e => {
     case 'profile': profileModal(); break;
     case 'close-modal': $modal.classList.add('hidden'); $modal._redraw = null; ui.showSecret = false; render(); break;
     case 'secret': secretModal(); break;
+    case 'lady-results': ladyResultsModal(); break;
     case 'toggle-secret':
       ui.showSecret = !ui.showSecret;
       if ($modal._redraw && !$modal.classList.contains('hidden')) $modal._redraw(); else render();
