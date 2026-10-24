@@ -67,7 +67,10 @@ const REJECT_RULES = {
   evil_wins: '坏人直接获胜',
   forced: '进入强制轮',
 };
-const DEFAULT_CONFIG = { size: 6, preset: 'standard', rejectRule: 'forced' };
+const DEFAULT_CONFIG = { size: 6, preset: 'standard', rejectRule: 'forced', lady: false };
+// Lady of the Lake (optional, 7+ players): used after missions 2, 3 and 4 (0-based rounds 1–3).
+const LADY_MIN_SIZE = 7;
+const LADY_AFTER_ROUNDS = [1, 2, 3];
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 class GameError extends Error {
@@ -123,7 +126,10 @@ function cleanConfig(input, base = DEFAULT_CONFIG) {
     preset = PRESETS[size][0].id; // size changed and the old preset doesn't exist for it
   }
   if (!REJECT_RULES[c.rejectRule]) fail('bad_config', '无效的流局规则');
-  return { size, preset, rejectRule: c.rejectRule };
+  if (given.lady !== undefined && typeof given.lady !== 'boolean') fail('bad_config', '无效的湖中女神设置');
+  if (given.lady === true && size < LADY_MIN_SIZE) fail('bad_config', `湖中女神需要 ${LADY_MIN_SIZE} 人及以上`);
+  // Shrinking below 7 players switches the Lady off.
+  return { size, preset, rejectRule: c.rejectRule, lady: size >= LADY_MIN_SIZE && c.lady === true };
 }
 
 function createRoom(code, hostName, config) {
@@ -188,17 +194,18 @@ function startGame(room) {
   const roles = shuffle(presetFor(room.config).roles);
   const order = bySeat(room.players).map(p => p.id); // lobby seating = table order for leader rotation
   const missions = BOARDS[size].missions;
+  const leaderIdx = randInt(size);
   room.gameNo++;
   room.status = 'playing';
   room.game = {
-    phase: 'reveal', // reveal | team | vote | mission | assassin | ended
+    phase: 'reveal', // reveal | team | vote | mission | lady | assassin | ended
     size,
     rejectRule,
     preset: room.config.preset,
     seats: order,
     roles: Object.fromEntries(order.map((id, i) => [id, roles[i]])),
     acks: [],
-    leaderIdx: randInt(size),
+    leaderIdx,
     round: 0, // 0-based
     successes: 0,
     fails: 0,
@@ -209,6 +216,13 @@ function startGame(room) {
     cards: {},
     history: missions.map((sz, i) => ({ round: i + 1, size: sz, failsNeeded: failsNeeded(size, i), attempts: [], result: null })),
     assassination: null,
+    // Starts with the player to the first leader's right: leaders move to the next seat, so that
+    // is the previous seat. holders = everyone who has held it (they cannot be checked).
+    lady: room.config.lady ? {
+      holder: order[(leaderIdx - 1 + size) % size],
+      holders: [order[(leaderIdx - 1 + size) % size]],
+      checks: [], // {round, from, target, team}; team is shown only to the checker
+    } : null,
     winner: null,
     reason: null,
   };
@@ -363,6 +377,21 @@ function applyAction(room, player, action) {
       if (Object.keys(g.cards).length === g.team.length) resolveMission(room);
       break;
     }
+    case 'lady': {
+      needPhase('lady');
+      need(g.lady.holder === player.id, 'forbidden', '只有湖中女神的持有者可以查验');
+      const target = action.target;
+      need(typeof target === 'string' && g.seats.includes(target), 'bad_target', '无效的目标');
+      need(target !== player.id, 'bad_target', '不能查验自己');
+      need(!g.lady.holders.includes(target), 'bad_target', '不能查验曾经持有湖中女神的玩家');
+      g.lady.checks.push({ round: g.round, from: player.id, target, team: teamOf(g.roles[target]) });
+      g.lady.holder = target;
+      g.lady.holders.push(target);
+      g.phase = 'team';
+      const nameOf = id => room.players.find(p => p.id === id).name;
+      setNotice(room, `${nameOf(player.id)} 使用湖中女神查验了 ${nameOf(target)}`);
+      break;
+    }
     case 'assassinate': {
       needPhase('assassin');
       need(g.roles[player.id] === 'assassin', 'forbidden', '只有刺客可以执行刺杀');
@@ -437,7 +466,7 @@ function resolveMission(room) {
   if (g.successes >= WINS_NEEDED) { g.phase = 'assassin'; return; }
   g.round++;
   nextLeader(g);
-  g.phase = 'team';
+  g.phase = g.lady && LADY_AFTER_ROUNDS.includes(g.round - 1) ? 'lady' : 'team';
 }
 
 // Who a role sees at night, following the standard Avalon rules.
@@ -525,6 +554,14 @@ function viewFor(room, player, online = new Set()) {
     history: g.history,
     acked: g.acks.slice(),
   });
+  if (g.lady) {
+    // Who checked whom is public; the result only goes to the checker.
+    view.lady = {
+      holder: g.lady.holder,
+      holders: g.lady.holders.slice(),
+      checks: g.lady.checks.map(c => ({ round: c.round, from: c.from, target: c.target, ...(c.from === player.id ? { team: c.team } : {}) })),
+    };
+  }
   if (g.phase === 'vote') {
     view.votedIds = Object.keys(g.votes);
     if (player.id in g.votes) view.myVote = g.votes[player.id];
@@ -543,6 +580,6 @@ function viewFor(room, player, online = new Set()) {
 }
 
 module.exports = {
-  MIN_PLAYERS, MAX_PLAYERS, BOARDS, PRESETS, ROLES, REJECT_RULES, DEFAULT_CONFIG, GameError,
+  MIN_PLAYERS, MAX_PLAYERS, BOARDS, PRESETS, ROLES, REJECT_RULES, DEFAULT_CONFIG, LADY_MIN_SIZE, GameError,
   createRoom, addPlayer, applyAction, viewFor, findByToken, generateCode, isValidCode, cleanName, cleanConfig, configView, presetFor,
 };

@@ -21,6 +21,7 @@ const OPTIONS = {
   roles: Object.fromEntries(Object.entries(game.ROLES).map(([k, v]) => [k, { name: v.name, short: v.short, team: v.team, ability: v.ability, tip: v.tip }])),
   rejectRules: game.REJECT_RULES,
   defaults: game.DEFAULT_CONFIG,
+  ladyMinSize: game.LADY_MIN_SIZE,
 };
 
 // Rooms saved by older versions may have no config or a preset that no longer exists.

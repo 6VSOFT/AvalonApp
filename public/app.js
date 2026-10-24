@@ -247,7 +247,10 @@ function configEditor(cfg, editable, minSize) {
       ${editable ? '<button type="button" class="small" data-a="cfg-rule">切换规则</button>' : ''}</div>
     <p class="muted" style="margin-top:6px">${cfg.rejectRule === 'forced'
       ? '连续 5 次组队被否决后，队长顺延，下一位队长组队后跳过投票直接执行任务。'
-      : '同一轮连续 5 次组队被否决，坏人直接获胜。'}</p>`;
+      : '同一轮连续 5 次组队被否决，坏人直接获胜。'}</p>
+    <div class="cfgrow"><span>湖中女神</span><b>${cfg.size < o.ladyMinSize ? `${o.ladyMinSize} 人及以上可用` : cfg.lady ? '开启' : '关闭'}</b>
+      ${editable && cfg.size >= o.ladyMinSize ? `<button type="button" class="small" data-a="cfg-lady">${cfg.lady ? '关闭' : '开启'}</button>` : ''}</div>
+    ${cfg.lady ? '<p class="muted" style="margin-top:6px">第 2、3、4 轮任务后，持有者可以秘密查验一名玩家的阵营，然后把湖中女神交给对方。</p>' : ''}`;
 }
 
 // Applies a config change: locally on the create screen, through the server in the lobby.
@@ -259,6 +262,8 @@ function changeConfig(kind, value) {
   else if (kind === 'preset') {
     const i = presets.findIndex(p => p.id === cur.preset);
     patch = { preset: presets[(i + 1) % presets.length].id };
+  } else if (kind === 'lady') {
+    patch = { lady: !cur.lady };
   } else {
     const rules = Object.keys(ui.options.rejectRules);
     patch = { rejectRule: rules[(rules.indexOf(cur.rejectRule) + 1) % rules.length] };
@@ -266,6 +271,7 @@ function changeConfig(kind, value) {
   if (ui.screen === 'create') {
     const next = { ...cur, ...patch };
     if (patch.size && !ui.options.presets[next.size].some(p => p.id === next.preset)) next.preset = ui.options.presets[next.size][0].id;
+    if (next.size < ui.options.ladyMinSize) next.lady = false;
     ui.createConfig = next;
     render();
   } else {
@@ -407,7 +413,7 @@ function viewBoard(st) {
     <div class="score"><div class="g"><b>${st.successes}</b>任务成功</div><div><b>${st.round}</b>当前轮次</div><div class="e"><b>${st.fails}</b>任务失败</div></div>
     <div class="track">${missions}</div>
     <div class="rejects">连续否决 ${rejects} <span>${st.rejects}/5</span></div>
-    <p class="muted" style="margin:8px 0 0">${st.size}人 · ${esc(st.config.presetName)} · 5连流局${esc(st.config.rejectRuleName)}</p>
+    <p class="muted" style="margin:8px 0 0">${st.size}人 · ${esc(st.config.presetName)} · 5连流局${esc(st.config.rejectRuleName)}${st.lady ? ' · 湖中女神' : ''}</p>
   </div>`;
 }
 
@@ -424,6 +430,7 @@ function secretCard(st) {
     <p>${esc(s.desc)}</p>
     ${s.knowsLabel ? `<p class="muted" style="margin-top:10px">${esc(s.knowsLabel)}：</p><ul class="${s.role === 'percival' ? 'unknown' : ''}">${s.knows.map(k => `<li><span class="seat-no">${seatNo(st, k.id)}号</span>${esc(k.name)}</li>`).join('')}</ul>` : '<p class="muted">你不知道任何人的身份。</p>'}
     ${s.note ? `<p class="muted" style="margin-top:8px">${esc(s.note)}</p>` : ''}
+    ${ladyResults(st)}
     <p class="muted" style="margin-top:12px">点击隐藏</p>
   </div>`;
 }
@@ -433,18 +440,43 @@ function playerList(st, opts = {}) {
     const sel = opts.selectable && opts.selected.includes(p.id);
     const badges = [];
     if (p.id === st.leaderId) badges.push('<span class="badge gold">👑 队长</span>');
+    if (st.lady && p.id === st.lady.holder) badges.push('<span class="badge lady">🌊 湖中女神</span>');
     if (opts.showTeam && st.team.includes(p.id)) badges.push('<span class="badge good">队员</span>');
     if (opts.voted) badges.push(opts.voted.includes(p.id) ? '<span class="badge ok">已投票</span>' : '<span class="badge">未投票</span>');
     if (opts.acked) badges.push(opts.acked.includes(p.id) ? '<span class="badge ok">已确认</span>' : '<span class="badge">查看中</span>');
-    const disabled = opts.disabledId === p.id;
+    const disabled = opts.disabledId === p.id || (opts.disabledIds || []).includes(p.id);
     return `<li class="${opts.selectable && !disabled ? 'selectable' : ''} ${sel ? 'selected' : ''}" ${opts.selectable && !disabled ? `data-a="${opts.action}" data-id="${esc(p.id)}"` : ''} style="${disabled ? 'opacity:.4' : ''}">
       <span class="seat">${i + 1}</span><span class="dot ${p.online ? 'on' : ''}"></span>
       <span class="name">${esc(p.name)}${p.id === st.me.id ? '（你）' : ''}</span>${badges.join('')}</li>`;
   }).join('')}</ul>`;
 }
 
+// The Lady of the Lake results this player saw (the server only sends results to the checker).
+function myLadyChecks(st) {
+  return st.lady ? st.lady.checks.filter(c => c.from === st.me.id && c.team) : [];
+}
+function ladyResults(st) {
+  const mine = myLadyChecks(st);
+  if (!mine.length) return '';
+  return `<p class="muted" style="margin-top:12px">湖中女神查验结果（只有你知道）：</p><ul class="lady-results">${mine.map(c =>
+    `<li class="${c.team}">第${c.round}轮后 · ${seatNo(st, c.target)}号 ${esc(nameOf(st, c.target))}：${c.team === 'good' ? '好人阵营' : '坏人阵营'}</li>`).join('')}</ul>`;
+}
+
 // Latest public announcement (vote or mission result), shown at the top of the phase panel.
 function lastNotice(st) {
+  const ladyNote = ladyNotice(st);
+  return ladyNote + missionNotice(st);
+}
+function ladyNotice(st) {
+  if (!st.lady || st.phase !== 'team') return '';
+  const last = st.lady.checks[st.lady.checks.length - 1];
+  if (!last || last.round !== st.round - 1 || st.history[st.round - 1].attempts.length) return '';
+  const who = `${seatNo(st, last.target)}号 ${esc(nameOf(st, last.target))}`;
+  return last.team
+    ? `<div class="notice ${last.team === 'good' ? 'ok' : 'bad'}">🌊 湖中女神结果（只有你能看到）：${who} 是<b>${last.team === 'good' ? '好人阵营' : '坏人阵营'}</b></div>`
+    : `<div class="notice">🌊 ${seatNo(st, last.from)}号 ${esc(nameOf(st, last.from))} 使用湖中女神查验了 ${who}</div>`;
+}
+function missionNotice(st) {
   const cur = st.history[st.round - 1];
   const att = cur.attempts[cur.attempts.length - 1];
   if (st.phase === 'mission' && att) {
@@ -523,6 +555,19 @@ function viewPhase(st) {
         <p class="muted center" style="margin-top:8px">已提交 ${st.submittedCount}/${st.team.length}</p>`;
       break;
     }
+    case 'lady': {
+      const holder = st.lady.holder;
+      if (holder === me) {
+        body = `<div class="phase">湖中女神</div><h2>选择一名玩家查验阵营</h2>
+          <p class="muted">只有你会看到结果（好人或坏人阵营，看不到具体角色）。不能查验自己和曾经持有湖中女神的玩家。查验后湖中女神交给对方。</p>
+          ${playerList(st, { selectable: true, selected: ui.target ? [ui.target] : [], action: 'target', disabledIds: st.lady.holders })}
+          <button data-a="lady" ${ui.target && !ui.busy ? '' : 'disabled'}>${ui.target ? `查验 ${seatNo(st, ui.target)}号 ${esc(nameOf(st, ui.target))}` : '请选择要查验的玩家'}</button>`;
+      } else {
+        body = `<div class="phase">湖中女神</div><h2>等待 ${seatNo(st, holder)}号 ${esc(nameOf(st, holder))} 使用湖中女神…</h2>
+          <p class="muted">持有者会秘密查验一名玩家的阵营，结果只有持有者知道。</p>${playerList(st)}`;
+      }
+      break;
+    }
     case 'assassin': {
       if (st.secret.role === 'assassin') {
         body = `<div class="phase">刺杀阶段</div><h2>选择你认为是梅林的玩家</h2>
@@ -545,7 +590,8 @@ function historyRows(st) {
       <span class="badge ${a.passed ? 'ok' : 'bad'}">${a.forced ? '强制' : `${a.approve}:${a.reject}`}</span>
       ${a.forced ? '' : `<div class="muted vote-seats">${voteBreakdown(st, a)}</div>`}</div>`).join('');
     const res = h.result ? `<span class="badge ${h.result.success ? 'ok' : 'bad'}">${h.result.success ? '成功' : '失败'} ${h.result.successCards}✓ ${h.result.failCards}✗</span>` : '<span class="badge">进行中</span>';
-    return `<tr><td>第${h.round}轮<br><span class="muted">${h.size}人${h.failsNeeded > 1 ? ' · 2败' : ''}</span></td><td>${atts}</td><td>${res}</td></tr>`;
+    const lady = st.lady ? st.lady.checks.filter(c => c.round === h.round).map(c => `<div class="muted vote-seats">🌊 ${seatNo(st, c.from)}号 查验 ${seatNo(st, c.target)}号</div>`).join('') : '';
+    return `<tr><td>第${h.round}轮<br><span class="muted">${h.size}人${h.failsNeeded > 1 ? ' · 2败' : ''}</span></td><td>${atts}${lady}</td><td>${res}</td></tr>`;
   }).join('');
 }
 function viewHistory(st) {
@@ -610,6 +656,11 @@ function rulesTab(o) {
       <p class="muted" style="margin-top:8px">* 7 人及以上第 4 轮需要 2 张失败牌任务才失败，其余每轮 1 张即失败。</p></div>
     <div class="card"><h3>阵容表（标准局）</h3>${presets}
       <p class="muted">创建房间时可以切换其他预设。</p></div>
+    <div class="card"><h3>可选规则：湖中女神（${o.ladyMinSize}–10 人）</h3><ul>
+      <li>房主在房间配置里开启。初始持有者是第一任队长右边的玩家。</li>
+      <li>第 2、3、4 轮任务结算后（成功或失败都可以），持有者选择一名玩家，秘密查看他是好人还是坏人阵营，看不到具体角色。</li>
+      <li>不能查验自己，也不能查验曾经持有湖中女神的玩家。查验后湖中女神交给被查验的人。</li>
+      <li>所有人都能看到谁查验了谁，结果只有持有者知道。持有者可以如实说，也可以说谎。</li></ul></div>
     <div class="card"><h3>特殊规则</h3><ul>
       <li>7 人及以上第 4 次任务需要 2 张失败才算失败。</li>
       <li>5 连流局：连续 5 次组队投票未通过时，可选「红方直接获胜」或「进入强制轮」。</li></ul></div>`;
@@ -639,6 +690,9 @@ function faqTab() {
     ['任务结果会公开谁出的失败吗？', '不会，只公开成功 / 失败和失败牌数量，保护红方身份。'],
     ['需要法官吗？', '不需要。每人用自己的手机查看身份、投票和出任务牌，系统自动结算。'],
     ['刷新页面或断线会怎样？', '重新打开即可回到房间，身份和已提交的操作都会保留。'],
+    ['湖中女神能看到梅林吗？', '不能，只能看到对方属于好人阵营还是坏人阵营。'],
+    ['湖中女神能查莫德雷德吗？', '可以，会显示为坏人阵营。'],
+    ['湖中女神每局能用几次？', '最多 3 次：第 2、3、4 轮任务后各一次。如果好人已经三次任务成功、进入刺杀阶段，就不再使用。'],
   ];
   return `<div class="card"><h3>房间可改配置</h3><p>创建房间后，房主可以在大厅调整：</p>
       <ul><li>房间人数（5–10 人）</li><li>角色预设（多种阵容选择）</li><li>5 连流局规则（红方直接获胜 / 进入强制轮）</li></ul>
@@ -684,6 +738,7 @@ document.addEventListener('click', async e => {
     case 'cfg-size': changeConfig('size', el.dataset.v); break;
     case 'cfg-preset': changeConfig('preset'); break;
     case 'cfg-rule': changeConfig('rule'); break;
+    case 'cfg-lady': changeConfig('lady'); break;
     case 'go-join': ui.screen = 'join'; render(); break;
     case 'home': ui.screen = 'home'; render(); break;
     case 'rules': ui.screen = 'rules'; render(); scrollTo(0, 0); break;
@@ -757,6 +812,9 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'target': ui.target = el.dataset.id; render(); break;
+    case 'lady':
+      if (ui.target && await confirmDialog(`查验 ${seatNo(st, ui.target)}号 ${nameOf(st, ui.target)}？`, '确认后不可更改，湖中女神会交给对方。', '查验', 'primary')) act('lady', { target: ui.target });
+      break;
     case 'assassinate':
       if (ui.target && await confirmDialog(`确认刺杀 ${nameOf(st, ui.target)}？`, '此操作不可撤销。猜中梅林则坏人获胜，否则好人获胜。', '刺杀')) act('assassinate', { target: ui.target });
       break;

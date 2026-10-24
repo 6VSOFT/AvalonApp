@@ -55,6 +55,7 @@ Secret information is the core of the game. Breaking these rules ruins real game
 - Leaving: any player can leave at any time. Leaving during or after a game ends it for everyone and returns the room to the lobby (with a `notice`). The host can `dissolve` the room: status `closed`, every later request gets HTTP 410.
 - Team approval needs a strict majority (`floor(n/2)+1`).
 - After 5 consecutive rejections: `evil_wins`, or `forced` (next leader's team skips the vote and goes straight to the mission).
+- Lady of the Lake (optional, `config.lady`, 7+ players only): starts with the player to the right of the first leader (the seat before them). After missions 2, 3 and 4 the game enters phase `lady` (unless it ended or went to the assassination); the holder checks one player who is not themselves and never held it, sees only that player's team, and passes the Lady to them. Who checked whom is public; the result is in `viewFor()` only for the checker.
 - Night info: Merlin sees evil except Mordred; Percival sees Merlin + Morgana without knowing which; evil see each other except Oberon (who sees no one); servants see no one.
 - 3 failed missions → evil wins. 3 successful → assassin picks a target; hitting Merlin → evil wins, otherwise good wins.
 - Roles revealed only when the game ends. Restart re-deals roles.

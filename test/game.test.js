@@ -315,7 +315,7 @@ test('config: host-only, lobby-only, validated, and resets ready', () => {
   throwsCode(() => G.applyAction(room, host, { type: 'config', config: { preset: 'nope' } }), 'bad_config');
   throwsCode(() => G.applyAction(room, host, { type: 'config', config: { rejectRule: 'x' } }), 'bad_config');
   G.applyAction(room, host, { type: 'config', config: { size: 7 } });
-  assert.deepStrictEqual(room.config, { size: 7, preset: 'standard', rejectRule: 'evil_wins' });
+  assert.deepStrictEqual(room.config, { size: 7, preset: 'standard', rejectRule: 'evil_wins', lady: false });
   assert.ok(room.players.every(p => !p.ready));
   G.applyAction(room, host, { type: 'config', config: { preset: 'mordred', rejectRule: 'forced' } });
   G.applyAction(room, host, { type: 'config', config: { size: 8 } }); // 8 has no 'mordred' preset
@@ -487,4 +487,123 @@ test('votes: who voted what is public only after everyone has voted, in seat ord
   assert.deepStrictEqual(att.rejecters, [seats[0], seats[2], seats[5]]);
   assert.strictEqual(att.approve, 3);
   assert.strictEqual(att.passed, false);
+});
+
+function setupLady(size = 7, preset = 'standard') {
+  const { room, player: host } = G.createRoom('ABCDE', 'P1', { size, preset, rejectRule: 'evil_wins', lady: true });
+  for (let i = 2; i <= size; i++) G.addPlayer(room, 'P' + i);
+  room.players.forEach(p => G.applyAction(room, p, { type: 'ready', value: true }));
+  G.applyAction(room, host, { type: 'start' });
+  room.players.forEach(p => G.applyAction(room, p, { type: 'ack' }));
+  return room;
+}
+const ladyHolder = room => P(room, room.game.lady.holder);
+// Lady holder checks the first eligible player in seat order.
+function useLady(room) {
+  const target = room.game.seats.find(id => !room.game.lady.holders.includes(id));
+  G.applyAction(room, ladyHolder(room), { type: 'lady', target });
+  return target;
+}
+
+test('lady: optional, off by default, only for 7+ players', () => {
+  assert.strictEqual(G.createRoom('ABCDE', 'H').room.config.lady, false);
+  for (const size of [5, 6]) throwsCode(() => G.createRoom('ABCDE', 'H', { size, lady: true }), 'bad_config');
+  const { room, player: host } = G.createRoom('ABCDE', 'H', { size: 7, lady: true });
+  assert.strictEqual(room.config.lady, true);
+  throwsCode(() => G.applyAction(room, host, { type: 'config', config: { lady: 'yes' } }), 'bad_config');
+  G.applyAction(room, host, { type: 'config', config: { size: 6 } });
+  assert.strictEqual(room.config.lady, false, 'shrinking below 7 switches it off');
+  G.applyAction(room, host, { type: 'config', config: { size: 10, lady: true } });
+  assert.strictEqual(room.config.lady, true);
+  const plain = setup(7);
+  assert.strictEqual(plain.game.lady, null);
+  assert.ok(!('lady' in G.viewFor(plain, plain.players[0])));
+});
+
+test('lady: starts with the player to the right of the first leader', () => {
+  for (let i = 0; i < 30; i++) {
+    const room = setupLady(8);
+    const g = room.game;
+    assert.strictEqual(g.lady.holder, g.seats[(g.leaderIdx - 1 + 8) % 8]);
+    assert.deepStrictEqual(g.lady.holders, [g.lady.holder]);
+  }
+});
+
+test('lady: used after missions 2, 3 and 4 only, whether they succeed or fail; at most 3 times', () => {
+  const room = setupLady(7);
+  runMission(room, 0);
+  assert.strictEqual(room.game.phase, 'team', 'not after mission 1');
+  runMission(room, 1); // mission 2 fails: still used
+  assert.strictEqual(room.game.phase, 'lady');
+  throwsCode(() => propose(room, room.game.seats.slice(0, 3)), 'bad_phase');
+  useLady(room);
+  assert.strictEqual(room.game.phase, 'team');
+  runMission(room, 1); // mission 3 fails (S F F so far)
+  assert.strictEqual(room.game.phase, 'lady');
+  useLady(room);
+  runMission(room, 1); // mission 4: two fails needed with 7 players, so one fail is a success (S F F S)
+  assert.strictEqual(room.game.phase, 'lady');
+  useLady(room);
+  assert.strictEqual(room.game.lady.checks.length, 3);
+  assert.deepStrictEqual(room.game.lady.checks.map(c => c.round), [2, 3, 4]);
+  runMission(room, 0); // mission 5 ends the game; no lady after it
+  assert.strictEqual(room.game.lady.checks.length, 3);
+  assert.notStrictEqual(room.game.phase, 'lady');
+});
+
+test('lady: not used when the third success moves the game to the assassination', () => {
+  const room = setupLady(7);
+  runMission(room, 0);
+  runMission(room, 0);
+  useLady(room);
+  runMission(room, 0); // third success
+  assert.strictEqual(room.game.phase, 'assassin');
+});
+
+test('lady: only the holder checks; not themselves, not former holders; then it passes on', () => {
+  const room = setupLady(7);
+  runMission(room, 0); runMission(room, 0);
+  const holder = ladyHolder(room);
+  const other = room.players.find(p => p.id !== holder.id);
+  throwsCode(() => G.applyAction(room, other, { type: 'lady', target: holder.id }), 'forbidden');
+  throwsCode(() => G.applyAction(room, holder, { type: 'lady', target: holder.id }), 'bad_target');
+  throwsCode(() => G.applyAction(room, holder, { type: 'lady', target: 'nobody' }), 'bad_target');
+  const first = useLady(room);
+  assert.strictEqual(room.game.lady.holder, first);
+  runMission(room, 0); // mission 3 -> third success -> assassin; use a fresh game for the former-holder rule
+  const r2 = setupLady(7);
+  runMission(r2, 1); runMission(r2, 1);
+  const firstHolder = r2.game.lady.holder;
+  useLady(r2);
+  runMission(r2, 0);
+  throwsCode(() => G.applyAction(r2, ladyHolder(r2), { type: 'lady', target: firstHolder }), 'bad_target');
+  const notHolder = r2.players.find(p => p.id !== r2.game.lady.holder);
+  throwsCode(() => G.applyAction(r2, notHolder, { type: 'lady', target: r2.game.seats.find(id => !r2.game.lady.holders.includes(id)) }), 'forbidden');
+});
+
+test('lady: the result (team only) is visible to the checker alone; Mordred shows as evil', () => {
+  for (let i = 0; i < 40; i++) {
+    const room = setupLady(8, 'standard');
+    runMission(room, 0); runMission(room, 1);
+    const checker = ladyHolder(room).id;
+    const target = useLady(room);
+    for (const p of room.players) {
+      const v = G.viewFor(room, p);
+      const c = v.lady.checks[0];
+      assert.deepStrictEqual([c.from, c.target, c.round], [checker, target, 2]);
+      if (p.id === checker) assert.strictEqual(c.team, G.ROLES[room.game.roles[target]].team);
+      else assert.ok(!('team' in c), 'nobody else sees the result');
+      assert.ok(!JSON.stringify(v.lady).includes('"role'), 'never the role itself');
+    }
+  }
+  // Mordred: 9-player standard has Mordred; make the holder check him.
+  for (let i = 0; i < 40; i++) {
+    const room = setupLady(9, 'standard');
+    runMission(room, 0); runMission(room, 1);
+    const mordred = byRole(room, 'mordred')[0];
+    if (room.game.lady.holder === mordred) continue;
+    G.applyAction(room, ladyHolder(room), { type: 'lady', target: mordred });
+    assert.strictEqual(G.viewFor(room, P(room, room.game.lady.checks[0].from)).lady.checks[0].team, 'evil');
+    return;
+  }
 });

@@ -223,3 +223,10 @@ button.danger-outline:active:not(:disabled) { background: #fff3f4; }
 .confirm-danger h3 { color: var(--bad); }
 .secret li .seat-no { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; background: rgba(255, 255, 255, .25); font-family: var(--mono); font-size: 13px; }
 .vote-seats { font-size: 12px; margin: 2px 0 6px; }
+
+/* Lady of the Lake */
+.badge.lady { background: #e0f4f7; color: #0b6b7a; border: 1px solid #a6dde6; }
+.lady-results { list-style: none; padding: 0; margin: 6px 0 0; }
+.secret .lady-results li { display: block; margin: 4px 0; border-radius: 10px; font-weight: 600; }
+.secret .lady-results li.good { background: var(--good); }
+.secret .lady-results li.evil { background: var(--evil); }
