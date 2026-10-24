@@ -1,24 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
-  <title>派西维尔：戴羽饰头盔的年轻骑士</title>
+  <title>派西维尔：头盔遮面、身披重甲的骑士</title>
   <defs><clipPath id="hex"><path d="m80 9 62 36v70l-62 36-62-36V45Z"/></clipPath></defs>
   <path d="m80 4 67 39v74l-67 39-67-39V43Z" fill="#123367"/>
   <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="#e8f1ff"/>
   <g clip-path="url(#hex)">
-    <path d="M32 160c4-30 20-46 48-48 28 2 44 18 48 48Z" fill="#1764dc"/>
-    <path d="M48 160c2-24 12-38 32-40 20 2 30 16 32 40Z" fill="#cdd8ea" stroke="#123367" stroke-width="2"/>
-    <path d="M40 134c4-14 14-21 25-21l2 16c-10 0-19 2-27 5ZM120 134c-4-14-14-21-25-21l-2 16c10 0 19 2 27 5Z" fill="#aebfdb" stroke="#123367" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M69 142q11-9 22 0-11 9-22 0Z" fill="#fff" stroke="#123367" stroke-width="1.8"/>
-    <circle cx="80" cy="142" r="3" fill="#1764dc"/>
-    <rect x="73" y="98" width="14" height="16" rx="3" fill="#e3c4ad"/>
-    <ellipse cx="80" cy="83" rx="14" ry="16" fill="#f2d4bd"/>
-    <path d="M66.5 76q2-10 13.5-10t13.5 10q-6-4.5-13.5-4.5T66.5 76Z" fill="#c98b3c"/>
-    <path d="M61 86c-3-24 6-40 19-42 13 2 22 18 19 42l-4-3c0-13-6-21-15-21s-15 8-15 21Z" fill="#cdd8ea" stroke="#123367" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M64 82l-2 18 9 7M96 82l2 18-9 7" fill="none" stroke="#123367" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M80 62v13" stroke="#123367" stroke-width="3" stroke-linecap="round"/>
-    <path d="M80 45c5-15 22-22 36-15-11 2-19 8-24 18Z" fill="#1764dc" stroke="#123367" stroke-width="1.5" stroke-linejoin="round"/>
-    <path d="M71 80l6 1.5M89 80l-6 1.5" stroke="#7a4a1e" stroke-width="2" stroke-linecap="round"/>
-    <path d="M72 85.5h5M83 85.5h5" stroke="#123367" stroke-width="2.2" stroke-linecap="round"/>
-    <path d="M76.5 94h7" stroke="#b07a62" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M26 160c4-34 22-50 54-52 32 2 50 18 54 52Z" fill="#1764dc"/>
+    <path d="M48 160c0-28 13-42 32-44 19 2 32 16 32 44Z" fill="#cdd8ea" stroke="#123367" stroke-width="2.2"/>
+    <path d="M80 120v8M80 144v16M58 148q22 6 44 0" stroke="#123367" stroke-width="1.8" fill="none"/>
+    <path d="M68 136q12-10 24 0-12 10-24 0Z" fill="#fff" stroke="#123367" stroke-width="1.8"/>
+    <circle cx="80" cy="136" r="3.2" fill="#1764dc"/>
+    <path d="M24 152c0-26 14-42 34-44l8 24c-16 2-28 10-32 22Z" fill="#b5c5dd" stroke="#123367" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M30 140c4-12 14-19 28-21M27 149c5-10 15-16 30-18" stroke="#123367" stroke-width="1.6" fill="none"/>
+    <path d="M136 152c0-26-14-42-34-44l-8 24c16 2 28 10 32 22Z" fill="#b5c5dd" stroke="#123367" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M130 140c-4-12-14-19-28-21M133 149c-5-10-15-16-30-18" stroke="#123367" stroke-width="1.6" fill="none"/>
+    <g fill="#123367"><circle cx="44" cy="126" r="1.6"/><circle cx="116" cy="126" r="1.6"/></g>
+    <path d="M64 106h32l-3 14H67Z" fill="#aebfdb" stroke="#123367" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M57 108V76c0-18 10-29 23-29s23 11 23 29v32q-23 9-46 0Z" fill="#cdd8ea" stroke="#123367" stroke-width="2.4"/>
+    <path d="M57 84h46v24q-23 9-46 0Z" fill="#b5c5dd" stroke="#123367" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M61 82.5h38" stroke="#123367" stroke-width="5" stroke-linecap="round"/>
+    <path d="M64 81.5h32" stroke="#4f8ff0" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M80 47v61" stroke="#123367" stroke-width="1.8"/>
+    <g fill="#123367"><circle cx="88" cy="94" r="1.4"/><circle cx="93" cy="94" r="1.4"/><circle cx="88" cy="99" r="1.4"/><circle cx="93" cy="99" r="1.4"/><circle cx="72" cy="94" r="1.4"/><circle cx="67" cy="94" r="1.4"/><circle cx="72" cy="99" r="1.4"/><circle cx="67" cy="99" r="1.4"/></g>
+    <path d="M80 49c4-19 23-29 41-22-13 3-23 10-29 23Z" fill="#1764dc" stroke="#123367" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M84 45c6-8 16-13 27-13" stroke="#86b7fb" stroke-width="1.6" fill="none" stroke-linecap="round"/>
   </g>
   <path d="m80 9 62 36v70l-62 36-62-36V45Z" fill="none" stroke="#86b7fb" stroke-width="2"/>
 </svg>

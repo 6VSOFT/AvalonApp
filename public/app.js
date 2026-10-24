@@ -307,7 +307,7 @@ const nameOf = (st, id) => (st.players.find(p => p.id === id) || {}).name || '?'
 // Seat numbers are public (the lobby seating), so the client shows them next to names.
 // Role art URL. Bump ROLE_ART_VERSION whenever the art changes: a new URL makes browsers that
 // cached the old images (they used to be cached for a day) fetch the new ones.
-const ROLE_ART_VERSION = 2;
+const ROLE_ART_VERSION = 3;
 const roleArt = role => `/roles/${encodeURIComponent(role)}.svg?v=${ROLE_ART_VERSION}`;
 const seatNo = (st, id) => st.players.findIndex(p => p.id === id) + 1;
 // "6号 Ahmad": how a player is named anywhere outside the seat list itself (not HTML-escaped).
