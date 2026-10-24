@@ -606,13 +606,64 @@ function viewEnded(st) {
   return `
     <div class="banner ${good ? 'good' : 'evil'}"><h2>${good ? '好人阵营胜利' : '坏人阵营胜利'}</h2><p>${esc(st.reason)}</p></div>
     ${a ? `<div class="card"><h3>刺杀结果</h3><p>刺客选择了 <b>${esc(nameOf(st, a.target))}</b> —— ${a.hit ? '正是梅林！' : '不是梅林。'}</p></div>` : ''}
-    <div class="card"><h3>身份揭晓</h3><ul class="players reveal">${st.reveal.map(r => `<li><img class="role-reveal" src="/roles/${esc(r.role)}.svg" alt="${esc(r.roleName)}" width="36" height="36"><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
+    <div class="card"><div class="card-head"><h3>身份揭晓</h3><button class="small ghost" data-a="copy" data-v="reveal">复制</button></div><ul class="players reveal">${st.reveal.map(r => `<li><img class="role-reveal" src="/roles/${esc(r.role)}.svg" alt="${esc(r.roleName)}" width="36" height="36"><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
       <span class="badge ${r.team}">${esc(r.roleName)}</span></li>`).join('')}</ul></div>
-    <div class="card"><div class="score"><div class="g"><b>${st.successes}</b>成功任务</div><div class="e"><b>${st.fails}</b>失败任务</div></div>
+    <div class="card"><div class="card-head"><h3>任务记录</h3><button class="small ghost" data-a="copy" data-v="history">复制</button></div>
+      <div class="score"><div class="g"><b>${st.successes}</b>成功任务</div><div class="e"><b>${st.fails}</b>失败任务</div></div>
       <table class="history"><tr><th>轮次</th><th>提名与投票</th><th>结果</th></tr>${historyRows(st)}</table></div>
     <div class="stack">
       ${st.me.isHost ? `<button data-a="restart" ${ui.busy ? 'disabled' : ''}>重新开始（重新分配身份）</button>` : '<p class="muted center">等待房主重新开始</p>'}
     </div>`;
+}
+
+// Plain-text summaries of a finished game for the copy buttons (to paste into a chat).
+function gameTitle(st) {
+  const result = st.winner === 'good' ? '好人阵营胜利' : '坏人阵营胜利';
+  return `阿瓦隆 · 房间 ${st.code} · ${st.size}人 · ${st.config.presetName}\n${result}：${st.reason}`;
+}
+function revealText(st) {
+  const lines = st.reveal.map((r, i) => `${i + 1}号 ${r.name}：${r.roleName.split(' ')[0]}（${r.team === 'good' ? '好人' : '坏人'}）`);
+  return `${gameTitle(st)}\n\n身份揭晓：\n${lines.join('\n')}`;
+}
+function historyText(st) {
+  const who = id => `${seatNo(st, id)}号 ${nameOf(st, id)}`;
+  const seats = ids => (ids && ids.length ? ids.map(id => seatNo(st, id)).join('、') : '无');
+  const lines = [`任务结果：成功 ${st.successes} · 失败 ${st.fails}`];
+  for (const h of st.history) {
+    if (!h.attempts.length && !h.result) continue;
+    const r = h.result;
+    const outcome = r ? `${r.success ? '成功' : '失败'}（成功牌 ${r.successCards} · 失败牌 ${r.failCards}）` : '未完成';
+    lines.push('', `第${h.round}轮（${h.size}人${h.failsNeeded > 1 ? '，需2张失败' : ''}）：${outcome}`);
+    h.attempts.forEach((a, i) => {
+      const head = `  #${i + 1} 队长 ${who(a.leader)} 提名 ${a.team.map(id => seatNo(st, id) + '号').join('、')}`;
+      if (a.forced) { lines.push(`${head} — 强制轮，未投票`); return; }
+      lines.push(`${head} — ${a.passed ? '通过' : '否决'} ${a.approve}:${a.reject}`);
+      if (a.approvers) lines.push(`     赞成【${seats(a.approvers)}】 反对【${seats(a.rejecters)}】`);
+    });
+    if (st.lady) st.lady.checks.filter(c => c.round === h.round).forEach(c => lines.push(`  湖中女神：${who(c.from)} 查验 ${who(c.target)}`));
+  }
+  const a = st.assassination;
+  if (a) lines.push('', `刺杀：刺客选择了 ${who(a.target)}，${a.hit ? '正是梅林' : '不是梅林'}`);
+  return `${gameTitle(st)}\n\n${lines.join('\n')}`;
+}
+// navigator.clipboard needs a secure context (https or localhost); fall back to execCommand
+// for plain-http LAN addresses.
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch {}
+    ta.remove();
+    return ok;
+  }
 }
 
 const RULE_TABS = [['rules', '游戏规则'], ['roles', '角色介绍'], ['faq', '常见问答']];
@@ -763,6 +814,11 @@ document.addEventListener('click', async e => {
         if (navigator.share) await navigator.share({ title: 'Avalon 阿瓦隆', text: `加入房间 ${st.code}`, url: link });
         else { await navigator.clipboard.writeText(link); toast('链接已复制', 'info'); }
       } catch {}
+      break;
+    }
+    case 'copy': {
+      const ok = await copyText(el.dataset.v === 'reveal' ? revealText(st) : historyText(st));
+      toast(ok ? '已复制到剪贴板' : '复制失败，请手动选择文字复制', ok ? 'info' : 'error');
       break;
     }
     case 'ready': act('ready', { value: !st.players.find(p => p.id === st.me.id).ready }); break;

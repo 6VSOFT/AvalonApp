@@ -230,3 +230,5 @@ button.danger-outline:active:not(:disabled) { background: #fff3f4; }
 .secret .lady-results li { display: block; margin: 4px 0; border-radius: 10px; font-weight: 600; }
 .secret .lady-results li.good { background: var(--good); }
 .secret .lady-results li.evil { background: var(--evil); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.card-head h3 { margin: 0; }
