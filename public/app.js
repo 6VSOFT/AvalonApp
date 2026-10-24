@@ -229,7 +229,7 @@ function configEditor(cfg, editable, minSize) {
   const chips = team => {
     const counts = {};
     preset.roles.filter(r => o.roles[r].team === team).forEach(r => { counts[r] = (counts[r] || 0) + 1; });
-    return Object.entries(counts).map(([r, n]) => `<span class="chip ${team}"><img class="role-chip" src="/roles/${esc(r)}.svg" alt="${esc(o.roles[r].name)}" width="22" height="22"><span>${esc(o.roles[r].short)}${n > 1 ? ' x' + n : ''}</span></span>`).join('');
+    return Object.entries(counts).map(([r, n]) => `<span class="chip ${team}"><img class="role-chip" src="${roleArt(r)}" alt="${esc(o.roles[r].name)}" width="22" height="22"><span>${esc(o.roles[r].short)}${n > 1 ? ' x' + n : ''}</span></span>`).join('');
   };
   const sizes = o.sizes.map(s => `<button type="button" class="size ${s === cfg.size ? 'on' : ''}" data-a="cfg-size" data-v="${s}"
     ${editable && s >= minSize ? '' : 'disabled'}>${s}</button>`).join('');
@@ -305,6 +305,10 @@ function viewGame() {
 
 const nameOf = (st, id) => (st.players.find(p => p.id === id) || {}).name || '?';
 // Seat numbers are public (the lobby seating), so the client shows them next to names.
+// Role art URL. Bump ROLE_ART_VERSION whenever the art changes: a new URL makes browsers that
+// cached the old images (they used to be cached for a day) fetch the new ones.
+const ROLE_ART_VERSION = 2;
+const roleArt = role => `/roles/${encodeURIComponent(role)}.svg?v=${ROLE_ART_VERSION}`;
 const seatNo = (st, id) => st.players.findIndex(p => p.id === id) + 1;
 // "6号 Ahmad": how a player is named anywhere outside the seat list itself (not HTML-escaped).
 const seatName = (st, id) => `${seatNo(st, id)}号 ${nameOf(st, id)}`;
@@ -427,7 +431,7 @@ function secretCard(st) {
   return `<div class="card secret ${s.team}" data-a="toggle-secret">
     <div class="badge ${s.team}">${s.team === 'good' ? '好人阵营' : '坏人阵营'}</div>
     <p class="secret-me">你是 <b>${esc(st.me.name)}</b></p>
-    <img class="role-art" src="/roles/${esc(s.role)}.svg" alt="${esc(s.roleName)}" width="140" height="140">
+    <img class="role-art" src="${roleArt(s.role)}" alt="${esc(s.roleName)}" width="140" height="140">
     <div class="role">${esc(s.roleName)}</div>
     <p>${esc(s.desc)}</p>
     ${s.knowsLabel ? `<p class="muted" style="margin-top:10px">${esc(s.knowsLabel)}：</p><ul class="${s.role === 'percival' ? 'unknown' : ''}">${s.knows.map(k => `<li><span class="seat-no">${seatNo(st, k.id)}号</span>${esc(k.name)}</li>`).join('')}</ul>` : '<p class="muted">你不知道任何人的身份。</p>'}
@@ -608,7 +612,7 @@ function viewEnded(st) {
   return `
     <div class="banner ${good ? 'good' : 'evil'}"><h2>${good ? '好人阵营胜利' : '坏人阵营胜利'}</h2><p>${esc(st.reason)}</p></div>
     ${a ? `<div class="card"><h3>刺杀结果</h3><p>刺客选择了 <b>${esc(seatName(st, a.target))}</b> —— ${a.hit ? '正是梅林！' : '不是梅林。'}</p></div>` : ''}
-    <div class="card"><div class="card-head"><h3>身份揭晓</h3><button class="small ghost" data-a="copy" data-v="reveal">复制</button></div><ul class="players reveal">${st.reveal.map((r, i) => `<li><span class="seat">${i + 1}</span><img class="role-reveal" src="/roles/${esc(r.role)}.svg" alt="${esc(r.roleName)}" width="36" height="36"><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
+    <div class="card"><div class="card-head"><h3>身份揭晓</h3><button class="small ghost" data-a="copy" data-v="reveal">复制</button></div><ul class="players reveal">${st.reveal.map((r, i) => `<li><span class="seat">${i + 1}</span><img class="role-reveal" src="${roleArt(r.role)}" alt="${esc(r.roleName)}" width="36" height="36"><span class="name">${esc(r.name)}${r.id === st.me.id ? '（你）' : ''}</span>
       <span class="badge ${r.team}">${esc(r.roleName)}</span></li>`).join('')}</ul></div>
     <div class="card"><div class="card-head"><h3>任务记录</h3><button class="small ghost" data-a="copy" data-v="history">复制</button></div>
       <div class="score"><div class="g"><b>${st.successes}</b>成功任务</div><div class="e"><b>${st.fails}</b>失败任务</div></div>
@@ -723,7 +727,7 @@ function rolesTab(o) {
   const card = r => {
     const role = o.roles[r];
     return `<div class="role-card ${role.team}">
-      <img src="/roles/${esc(r)}.svg" alt="${esc(role.name)}" width="72" height="72">
+      <img src="${roleArt(r)}" alt="${esc(role.name)}" width="72" height="72">
       <div><h3>${esc(role.short)}</h3>
         <p><span class="muted">阵营：</span><b class="team-${role.team}">${role.team === 'good' ? '蓝方' : '红方'}</b></p>
         <p><span class="muted">能力：</span>${esc(role.ability)}</p>

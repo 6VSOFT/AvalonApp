@@ -1,11 +1,11 @@
 // App-shell cache only. API calls and the event stream always go to the network,
 // so the app never pretends an action succeeded while offline.
-const CACHE = 'avalon-v15';
+const CACHE = 'avalon-v16';
 const SHELL = [
   '/', '/index.html', '/app.js', '/style.css', '/manifest.webmanifest',
   '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png',
-  '/roles/merlin.svg', '/roles/percival.svg', '/roles/servant.svg', '/roles/assassin.svg',
-  '/roles/morgana.svg', '/roles/mordred.svg', '/roles/oberon.svg', '/roles/minion.svg',
+  '/roles/merlin.svg?v=2', '/roles/percival.svg?v=2', '/roles/servant.svg?v=2', '/roles/assassin.svg?v=2',
+  '/roles/morgana.svg?v=2', '/roles/mordred.svg?v=2', '/roles/oberon.svg?v=2', '/roles/minion.svg?v=2',
 ];
 
 self.addEventListener('install', e => {
